@@ -44,12 +44,12 @@ export const setUsernameWithValidation = async (userId: string, username: string
 		nameValidation = new RegExp('^[0-9a-zA-Z-_.]+$');
 	}
 
-	if (!nameValidation.test(username)) {
-		throw new Meteor.Error(
-			'username-invalid',
-			`${_.escape(username)} is not a valid username, use only letters, numbers, dots, hyphens and underscores`,
-		);
-	}
+	// if (!nameValidation.test(username)) {
+	// 	throw new Meteor.Error(
+	// 		'username-invalid',
+	// 		`${_.escape(username)} is not a valid username, use only letters, numbers, dots, hyphens and underscores`,
+	// 	);
+	// }
 
 	if (!(await checkUsernameAvailability(username))) {
 		throw new Meteor.Error('error-field-unavailable', `<strong>${_.escape(username)}</strong> is already in use :(`, {

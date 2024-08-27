@@ -126,13 +126,13 @@ async function validateUserData(userId, userData) {
 		nameValidation = new RegExp('^[0-9a-zA-Z-_.]+$');
 	}
 
-	if (userData.username && !nameValidation.test(userData.username)) {
-		throw new Meteor.Error('error-input-is-not-a-valid-field', `${_.escape(userData.username)} is not a valid username`, {
-			method: 'insertOrUpdateUser',
-			input: userData.username,
-			field: 'Username',
-		});
-	}
+	// if (userData.username && !nameValidation.test(userData.username)) {
+	// 	throw new Meteor.Error('error-input-is-not-a-valid-field', `${_.escape(userData.username)} is not a valid username`, {
+	// 		method: 'insertOrUpdateUser',
+	// 		input: userData.username,
+	// 		field: 'Username',
+	// 	});
+	// }
 
 	if (!userData._id && !userData.password && !userData.setRandomPassword) {
 		throw new Meteor.Error('error-the-field-is-required', 'The field Password is required', {
