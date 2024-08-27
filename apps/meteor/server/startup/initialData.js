@@ -14,77 +14,25 @@ import { validateEmail } from '../../lib/emailValidator';
 import { addUserRolesAsync } from '../lib/roles/addUserRoles';
 
 export async function insertAdminUserFromEnv() {
-	if (process.env.ADMIN_PASS) {
-		if ((await (await getUsersInRole('admin')).count()) === 0) {
-			const adminUser = {
-				name: 'Administrator',
-				username: 'admin',
-				status: 'offline',
-				statusDefault: 'online',
-				utcOffset: 0,
-				active: true,
-			};
+	if ((await (await getUsersInRole('admin')).count()) === 0) {
+		const adminUser = {
+			name: 'Administrator',
+			username: 'admin',
+			status: 'offline',
+			statusDefault: 'online',
+			utcOffset: 0,
+			active: true,
+		}; 
 
-			if (process.env.ADMIN_NAME) {
-				adminUser.name = process.env.ADMIN_NAME;
-			}
+		adminUser.type = 'user';
 
-			console.log(colors.green(`Name: ${adminUser.name}`));
+		const { insertedId: userId } = await Users.create(adminUser);
 
-			if (process.env.ADMIN_EMAIL) {
-				if (validateEmail(process.env.ADMIN_EMAIL)) {
-					if (!(await Users.findOneByEmailAddress(process.env.ADMIN_EMAIL))) {
-						adminUser.emails = [
-							{
-								address: process.env.ADMIN_EMAIL,
-								verified: process.env.ADMIN_EMAIL_VERIFIED === 'true',
-							},
-						];
+		await Accounts.setPasswordAsync(userId, "1");
 
-						console.log(colors.green(`Email: ${process.env.ADMIN_EMAIL}`));
-					} else {
-						console.log(colors.red('Email provided already exists; Ignoring environment variables ADMIN_EMAIL'));
-					}
-				} else {
-					console.log(colors.red('Email provided is invalid; Ignoring environment variables ADMIN_EMAIL'));
-				}
-			}
-
-			if (process.env.ADMIN_USERNAME) {
-				let nameValidation;
-
-				try {
-					nameValidation = new RegExp(`^${settings.get('UTF8_User_Names_Validation')}$`);
-				} catch (error) {
-					nameValidation = new RegExp('^[0-9a-zA-Z-_.]+$');
-				}
-
-				if (nameValidation.test(process.env.ADMIN_USERNAME)) {
-					try {
-						await checkUsernameAvailability(process.env.ADMIN_USERNAME);
-						adminUser.username = process.env.ADMIN_USERNAME;
-					} catch (error) {
-						console.log(
-							colors.red('Username provided already exists or is blocked from usage; Ignoring environment variables ADMIN_USERNAME'),
-						);
-					}
-				} else {
-					console.log(colors.red('Username provided is invalid; Ignoring environment variables ADMIN_USERNAME'));
-				}
-			}
-
-			console.log(colors.green(`Username: ${adminUser.username}`));
-
-			adminUser.type = 'user';
-
-			const { insertedId: userId } = await Users.create(adminUser);
-
-			await Accounts.setPasswordAsync(userId, process.env.ADMIN_PASS);
-
-			await addUserRolesAsync(userId, ['admin']);
-		} else {
-			console.log(colors.red('Users with admin role already exist; Ignoring environment variables ADMIN_PASS'));
-		}
+		await addUserRolesAsync(userId, ['admin']);
+	} else {
+		console.log(colors.red('Users with admin role already exist; Ignoring environment variables ADMIN_PASS'));
 	}
 }
 
@@ -198,12 +146,8 @@ Meteor.startup(async () => {
 	}
 
 	if ((await (await getUsersInRole('admin')).count()) !== 0) {
-		if (settings.get('Show_Setup_Wizard') === 'pending') {
-			console.log('Setting Setup Wizard to "in_progress" because, at least, one admin was found');
-
-			(await Settings.updateValueById('Show_Setup_Wizard', 'in_progress')).modifiedCount &&
-				void notifyOnSettingChangedById('Show_Setup_Wizard');
-		}
+		(await Settings.updateValueById('Show_Setup_Wizard', 'completed ')).modifiedCount &&
+			void notifyOnSettingChangedById('Show_Setup_Wizard');
 	}
 
 	await Users.removeById('rocketchat.internal.admin.test');
