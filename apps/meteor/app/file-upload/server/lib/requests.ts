@@ -9,6 +9,16 @@ WebApp.connectHandlers.use(FileUpload.getPath(), async (req, res, next) => {
 	if (match?.[1]) {
 		const file = await Uploads.findOneById(match[1]);
 
+		res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Auth-Token, X-User-Id');
+
+        if (req.method === 'OPTIONS') {
+            res.writeHead(204);
+            return res.end();
+        }
+
+
 		if (file) {
 			if (!(await FileUpload.requestCanAccessFiles(req, file))) {
 				res.writeHead(403);
@@ -16,7 +26,6 @@ WebApp.connectHandlers.use(FileUpload.getPath(), async (req, res, next) => {
 			}
 
 			res.setHeader('Content-Security-Policy', "default-src 'none'");
-			res.setHeader('Cache-Control', 'max-age=31536000');
 			return FileUpload.get(file, req, res, next);
 		}
 	}
