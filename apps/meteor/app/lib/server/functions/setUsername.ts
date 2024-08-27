@@ -83,9 +83,9 @@ export const _setUsername = async function (userId: string, u: string, fullUser:
 	} catch (error) {
 		nameValidation = new RegExp('^[0-9a-zA-Z-_.]+$');
 	}
-	if (!nameValidation.test(username)) {
-		return false;
-	}
+	// if (!nameValidation.test(username)) {
+	// 	return false;
+	// }
 	const user = fullUser || (await Users.findOneById(userId));
 	// User already has desired username, return
 	if (user.username === username) {
