@@ -76,7 +76,7 @@ export async function createDirectRoom(
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const sortedMembers = roomMembers.sort((u1, u2) => (u1.name! || u1.username!).localeCompare(u2.name! || u2.username!));
 
-	const usernames: string[] = sortedMembers.map(({ username }) => username as string).filter(Boolean);
+	const usernames = sortedMembers.map((item) => ({ username: item.username, name: item.name }));
 	const uids = roomMembers.map(({ _id }) => _id).sort();
 
 	// Deprecated: using users' _id to compose the room _id is deprecated
