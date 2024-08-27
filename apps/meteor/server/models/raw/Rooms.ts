@@ -1604,6 +1604,17 @@ export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
 		return this.updateMany(query, update);
 	}
 
+	relpaceName(previousUsername, newName) {
+		const query = { "usernames.username": previousUsername };
+
+		const update = {
+			$set: {
+				"usernames.$.name": newName,
+			},
+		};
+		return this.update(query, update, { multi: true });
+	}
+
 	replaceMutedUsername(previousUsername: IUser['username'], username: IUser['username']): Promise<Document | UpdateResult> {
 		const query: Filter<IRoom> = { muted: previousUsername };
 

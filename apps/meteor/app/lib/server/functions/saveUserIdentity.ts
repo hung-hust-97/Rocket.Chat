@@ -144,6 +144,8 @@ async function updateUsernameReferences({
 		// update name and fname of 1-on-1 direct messages
 		await Subscriptions.updateDirectNameAndFnameByName(previousUsername, rawUsername && username, rawName && name);
 
+		Rooms.relpaceName(previousUsername, name)
+		
 		// update name and fname of group direct messages
 		await updateGroupDMsName(user);
 
