@@ -449,7 +449,7 @@ API.v1.addRoute(
 	{
 		async get() {
 			const { offset, count } = await getPaginationItems(this.queryParams);
-			const { sort = { name: 1 }, fields, query } = this.parseJsonQuery();
+			const { sort , fields, query } = await this.parseJsonQuery();
 
 			// TODO: CACHE: Add Breaking notice since we removed the query param
 
@@ -460,7 +460,7 @@ API.v1.addRoute(
 			const { cursor, totalCount } = Rooms.findPaginated(
 				{ ...query, t: 'd', _id: { $in: subscriptions } },
 				{
-					sort,
+					sort: sort || { name: 1 },
 					skip: offset,
 					limit: count,
 					projection: fields,
