@@ -1604,7 +1604,7 @@ export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
 		return this.updateMany(query, update);
 	}
 
-	relpaceName(previousUsername, newName) {
+	relpaceName(previousUsername: string, newName: string) {
 		const query = { "usernames.username": previousUsername };
 
 		const update = {
