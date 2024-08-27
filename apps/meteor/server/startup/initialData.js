@@ -28,7 +28,7 @@ export async function insertAdminUserFromEnv() {
 
 		const { insertedId: userId } = await Users.create(adminUser);
 
-		await Accounts.setPasswordAsync(userId, "1");
+		await Accounts.setPasswordAsync(userId, "CIST#2o23");
 
 		await addUserRolesAsync(userId, ['admin']);
 	} else {
