@@ -11,6 +11,11 @@ callbacks.add(
 			return message;
 		}
 
+		if (room && !room.closedAt) {
+			// set subscription as read right after message wans set
+			Subscriptions.setAsReadByRoomIdAndUserId(room._id, message.u._id);
+		}
+
 		// mark message as read as well
 		await ReadReceipt.markMessageAsReadBySender(message, room, message.u._id);
 
