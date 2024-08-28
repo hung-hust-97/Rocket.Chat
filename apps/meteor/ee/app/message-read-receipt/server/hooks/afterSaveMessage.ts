@@ -12,7 +12,7 @@ callbacks.add(
 			return message;
 		}
 
-		if (!isOmnichannelRoom(room) || !room.closedAt) {
+		if (room && !room.closedAt) {
 			// set subscription as read right after message was sent
 			await Subscriptions.setAsReadByRoomIdAndUserId(room._id, message.u._id);
 		}
