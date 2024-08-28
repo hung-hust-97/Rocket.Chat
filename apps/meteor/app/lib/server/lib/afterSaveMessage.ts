@@ -1,7 +1,7 @@
 import type { IMessage, IUser, IRoom } from '@rocket.chat/core-typings';
 import type { Updater } from '@rocket.chat/models';
 import { Rooms } from '@rocket.chat/models';
-
+import { Subscriptions } from '@rocket.chat/models';
 import { callbacks } from '../../../../lib/callbacks';
 
 export async function afterSaveMessage(
@@ -15,6 +15,12 @@ export async function afterSaveMessage(
 
 	if (!roomUpdater && updater.hasChanges()) {
 		await Rooms.updateFromUpdater({ _id: room._id }, updater);
+	}
+
+	if (room && !room.closedAt) {
+		console.log(1)
+		// set subscription as read right after message was sent
+		await Subscriptions.setAsReadByRoomIdAndUserId(room._id, message.u._id);
 	}
 
 	// TODO: Fix type - callback configuration needs to be updated
