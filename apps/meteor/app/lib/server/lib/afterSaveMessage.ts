@@ -17,12 +17,6 @@ export async function afterSaveMessage(
 		await Rooms.updateFromUpdater({ _id: room._id }, updater);
 	}
 
-	if (room && !room.closedAt) {
-		console.log(1)
-		// set subscription as read right after message was sent
-		await Subscriptions.setAsReadByRoomIdAndUserId(room._id, message.u._id);
-	}
-
 	// TODO: Fix type - callback configuration needs to be updated
 	return data as unknown as IMessage;
 }
