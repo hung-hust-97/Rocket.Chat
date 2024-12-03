@@ -1,4 +1,10 @@
-import type { IMessage, IPushNotificationConfig, IPushTokenTypes, IPushToken } from '@rocket.chat/core-typings';
+import type {
+	IMessage,
+	IPushNotificationConfig,
+	IPushTokenTypes,
+	IPushToken,
+	IDeviceTypes,
+} from '@rocket.chat/core-typings';
 import Ajv from 'ajv';
 
 const ajv = new Ajv({
@@ -10,6 +16,7 @@ type PushTokenProps = {
 	type: IPushTokenTypes;
 	value: string;
 	appName: string;
+	deviceType: IDeviceTypes;
 };
 
 const PushTokenPropsSchema = {
@@ -28,8 +35,12 @@ const PushTokenPropsSchema = {
 		appName: {
 			type: 'string',
 		},
+		deviceType: {
+			type: 'string',
+			allowedValues: ['DESKTOP', 'WEB', 'IOS', 'ANDROID'],
+		}
 	},
-	required: ['type', 'value', 'appName'],
+	required: ['type', 'value', 'appName', 'deviceType'],
 	additionalProperties: false,
 };
 
