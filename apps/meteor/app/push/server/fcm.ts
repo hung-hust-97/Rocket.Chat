@@ -153,6 +153,7 @@ function getFCMMessagesFromPushData(userTokens: string[], notification: PendingP
 }
 
 export const sendFCM = function ({ userTokens, notification, _removeToken, options }: NativeNotificationParameters): void {
+	console.log("Start sendFCM: ", new Date().toLocaleString());
 	const tokens = typeof userTokens === 'string' ? [userTokens] : userTokens;
 	if (!tokens.length) {
 		logger.log('sendFCM no push tokens found');
@@ -188,5 +189,6 @@ export const sendFCM = function ({ userTokens, notification, _removeToken, optio
 		response.catch((err) => {
 			logger.error('sendFCM error', err);
 		});
+		console.log("Finish sendFCM: ", new Date().toLocaleString());
 	}
 };
