@@ -60,6 +60,12 @@ Meteor.methods<ServerMethods>({
 
 		const room = roomFind ? await roomFind.call(this, name) : await Rooms.findByTypeAndNameOrId(type, name);
 
+		if (room && userId && room.hidden && Array.isArray(room.hidden) && room.hidden.includes(userId)) {
+			throw new Meteor.Error('error-room-hidden', 'Room is deleted by the user', {
+				method: 'getRoomByTypeAndName',
+			});
+		}
+
 		if (!room) {
 			throw new Meteor.Error('error-invalid-room', 'Invalid room', {
 				method: 'getRoomByTypeAndName',

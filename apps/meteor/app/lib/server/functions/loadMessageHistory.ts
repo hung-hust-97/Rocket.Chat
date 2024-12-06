@@ -51,7 +51,7 @@ export async function loadMessageHistory({
 				showThreadMessages,
 		  ).toArray()
 		: await Messages.findVisibleByRoomIdNotContainingTypes(rid, hiddenMessageTypes, options, showThreadMessages).toArray();
-	const messages = await normalizeMessagesForUser(records, userId);
+	let messages = await normalizeMessagesForUser(records, userId);
 	let unreadNotLoaded = 0;
 	let firstUnread;
 
@@ -86,6 +86,12 @@ export async function loadMessageHistory({
 			firstUnread = (await unreadMessages.toArray())[0];
 			unreadNotLoaded = totalCursor;
 		}
+	}
+
+	if (userId) {
+		messages = messages.filter((message: IMessage) => {
+			return !message.hidden || !message.hidden.includes(userId);
+		});
 	}
 
 	return {

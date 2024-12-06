@@ -453,9 +453,15 @@ API.v1.addRoute(
 
 			// TODO: CACHE: Add Breaking notice since we removed the query param
 
-			const subscriptions = await Subscriptions.find({ 'u._id': this.userId, 't': 'd' }, { projection: { rid: 1 } })
+			let subscriptions: (string | null)[] = await Subscriptions.find({ 'u._id': this.userId, 't': 'd' }, { projection: { rid: 1 } })
 				.map((item) => item.rid)
 				.toArray();
+
+			subscriptions = await Promise.all(subscriptions.map(async (roomId) => {
+				const room = await Rooms.findOneById(roomId);
+				return !(room && room.hidden && room.hidden.includes(this.userId)) ? roomId : null;
+			}));
+			subscriptions = subscriptions.filter((roomId) => roomId !== null);
 
 			const { cursor, totalCount } = Rooms.findPaginated(
 				{ ...query, t: 'd', _id: { $in: subscriptions } },
