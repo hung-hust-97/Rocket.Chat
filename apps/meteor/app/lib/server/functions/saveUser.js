@@ -374,13 +374,16 @@ export const saveUser = async function (userId, userData) {
 	await validateUserEditing(userId, userData);
 
 	// update user
-	if (userData.hasOwnProperty('username') || userData.hasOwnProperty('name')) {
+	if (userData.hasOwnProperty('username') || userData.hasOwnProperty('name') ||
+		userData.hasOwnProperty('active_tenant') || userData.hasOwnProperty('all_tenant')) {
 		if (
 			!(await saveUserIdentity({
 				_id: userData._id,
 				username: userData.username,
 				name: userData.name,
 				updateUsernameInBackground: true,
+				active_tenant: userData.active_tenant,
+				all_tenant: userData.all_tenant,
 			}))
 		) {
 			throw new Meteor.Error('error-could-not-save-identity', 'Could not save user identity', {

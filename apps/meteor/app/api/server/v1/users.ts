@@ -561,8 +561,21 @@ API.v1.addRoute(
 					if (!otherUser || otherUser._id === currentUser._id) {
 						return null;
 					}
-					const otherUserActiveTenant = otherUser.services?.keycloak?.active_tenant?.tenant_id;
-					return (activeTenant === otherUserActiveTenant) ? user : null;
+
+					const otherUserAllTenant = otherUser.services?.keycloak?.all_tenant;
+					if (Array.isArray(otherUserAllTenant)) {
+						let inTenant = false;
+						for (const tenant of otherUserAllTenant) {
+							const otherUserActiveTenant = tenant.tenant_id;
+							if (activeTenant === otherUserActiveTenant) {
+								inTenant = true;
+								break;
+							}
+						}
+						return inTenant ? user : null;
+					}
+
+					return null;
 				}));
 				users = users.filter((user) => user !== null);
 			}
