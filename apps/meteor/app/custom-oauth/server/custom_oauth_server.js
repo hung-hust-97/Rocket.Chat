@@ -419,6 +419,7 @@ export class CustomOAuth {
 			const serviceData = {
 				accessToken: options.accessToken,
 				expiresAt: +new Date() + 1000 * parseInt(options.expiresIn, 10),
+				active_tenant: identity.active_tenant,
 			};
 
 			const fields = _.pick(identity, whitelisted);
