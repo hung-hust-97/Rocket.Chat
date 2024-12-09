@@ -457,9 +457,22 @@ API.v1.addRoute(
 				.map((item) => item.rid)
 				.toArray();
 
+			// Remove hidden room
 			subscriptions = await Promise.all(subscriptions.map(async (roomId) => {
 				const room = await Rooms.findOneById(roomId);
 				return !(room && room.hidden && room.hidden.includes(this.userId)) ? roomId : null;
+			}));
+			subscriptions = subscriptions.filter((roomId) => roomId !== null);
+
+			// Remove rooms of users who are not in the same tenant
+			const user = await Users.findOneById(this.userId);
+			const activeTenant = user?.services?.keycloak?.active_tenant?.tenant_id;
+			subscriptions = await Promise.all(subscriptions.map(async (roomId) => {
+				const room = await Rooms.findOneById(roomId);
+				const oppositeUserId = room?.uids?.filter(userId => userId !== this.userId)[0];
+				const oppositeUser = oppositeUserId ? await Users.findOneById(oppositeUserId) : null;
+				const oppositeUserActiveTenant = oppositeUser?.services?.keycloak?.active_tenant?.tenant_id;
+				return (activeTenant === oppositeUserActiveTenant) ? roomId : null;
 			}));
 			subscriptions = subscriptions.filter((roomId) => roomId !== null);
 
