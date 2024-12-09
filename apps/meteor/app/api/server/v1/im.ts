@@ -471,8 +471,19 @@ API.v1.addRoute(
 				const room = await Rooms.findOneById(roomId);
 				const oppositeUserId = room?.uids?.filter(userId => userId !== this.userId)[0];
 				const oppositeUser = oppositeUserId ? await Users.findOneById(oppositeUserId) : null;
-				const oppositeUserActiveTenant = oppositeUser?.services?.keycloak?.active_tenant?.tenant_id;
-				return (activeTenant === oppositeUserActiveTenant) ? roomId : null;
+				const oppositeUserAllTenant = oppositeUser?.services?.keycloak?.all_tenant;
+				if (Array.isArray(oppositeUserAllTenant)) {
+					let inTenant = false;
+					for (const tenant of oppositeUserAllTenant) {
+						const tenantId = tenant.tenant_id;
+						if (activeTenant === tenantId) {
+							inTenant = true;
+							break;
+						}
+					}
+					return inTenant ? roomId : null;
+				}
+				return null;
 			}));
 			subscriptions = subscriptions.filter((roomId) => roomId !== null);
 

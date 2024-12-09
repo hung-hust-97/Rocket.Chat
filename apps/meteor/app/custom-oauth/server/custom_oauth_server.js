@@ -420,6 +420,7 @@ export class CustomOAuth {
 				accessToken: options.accessToken,
 				expiresAt: +new Date() + 1000 * parseInt(options.expiresIn, 10),
 				active_tenant: identity.active_tenant,
+				all_tenant: identity.all_tenant,
 			};
 
 			const fields = _.pick(identity, whitelisted);
