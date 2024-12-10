@@ -27,7 +27,7 @@ export async function saveUserIdentity({
 	username?: string;
 	updateUsernameInBackground?: boolean; // TODO: remove this
 	active_tenant?: object;
-	all_tenant?: Array<object>;
+	all_tenant?: object;
 }) {
 	if (!_id) {
 		return false;
@@ -83,13 +83,14 @@ export async function saveUserIdentity({
 		user.services = user.services || {};
 		user.services.keycloak = user.services.keycloak || {};
 		user.services.keycloak.all_tenant = all_tenant;
-		if (!(await Users.updateOne(
-			{ _id },
-			{
-				$set: {
-					"services.keycloak.all_tenant": all_tenant,
-				}
-			}))) {
+		const updateResult = await Users.updateOne(
+				{ _id },
+				{
+					$push: {
+						"services.keycloak.all_tenant": all_tenant,
+					}
+				});
+		if (!updateResult.modifiedCount) {
 			return false;
 		}
 	}
