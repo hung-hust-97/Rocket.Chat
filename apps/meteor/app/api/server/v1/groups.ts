@@ -588,6 +588,33 @@ API.v1.addRoute(
 );
 
 API.v1.addRoute(
+	'groups.inviteMultiple',
+	{ authRequired: true },
+	{
+		async post() {
+			const { groupIds } = this.bodyParams;
+
+			const user = await getUserFromParams(this.bodyParams);
+			if (!user?.username) {
+				return API.v1.failure('Invalid user');
+			}
+
+			for (const groupId of groupIds) {
+				try {
+				  // Gọi Meteor method để thêm người dùng vào nhóm
+				  await Meteor.callAsync('addUsersToRoom', { rid: groupId, users: users.map((u) => u.username) });
+				} catch (error) {
+				  console.error(`Failed to invite users to group ${groupId}:`, error);
+				  return API.v1.failure(`Failed to invite users to group ${groupId}`);
+				}
+			  }
+
+			return API.v1.success();
+		},
+	},
+);
+
+API.v1.addRoute(
 	'groups.kick',
 	{ authRequired: true },
 	{
@@ -600,6 +627,32 @@ API.v1.addRoute(
 			}
 
 			await removeUserFromRoomMethod(this.userId, { rid: room._id, username: user.username });
+
+			return API.v1.success();
+		},
+	},
+);
+
+API.v1.addRoute(
+	'groups.kickMultiple',
+	{ authRequired: true },
+	{
+		async post() {
+			const user = await getUserFromParams(this.bodyParams);
+			const {groupIds} = this.bodyParams;
+
+			if (!Array.isArray(groupIds) || groupIds.length === 0) {
+				throw new Error('Invalid parameters: groupIds must be a non-empty array');
+			  }
+
+			if (!user?.username) {
+				return API.v1.failure('Invalid user');
+			}
+
+			for (const groupId of groupIds) {
+				const room = await getRoomFromParams(groupId);
+				await removeUserFromRoomMethod(this.userId, { rid: room._id, username: user.username });
+			}
 
 			return API.v1.success();
 		},

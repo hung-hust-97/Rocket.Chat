@@ -15,8 +15,8 @@ import type { GroupsFilesProps } from './GroupsFilesProps';
 import type { GroupsGetIntegrationsProps } from './GroupsGetIntegrationsProps';
 import type { GroupsHistoryProps } from './GroupsHistoryProps';
 import type { GroupsInfoProps } from './GroupsInfoProps';
-import type { GroupsInviteProps } from './GroupsInviteProps';
-import type { GroupsKickProps } from './GroupsKickProps';
+import type { GroupsInviteMultipleProps, GroupsInviteProps } from './GroupsInviteProps';
+import type { GroupsKickMultipleProps, GroupsKickProps } from './GroupsKickProps';
 import type { GroupsLeaveProps } from './GroupsLeaveProps';
 import type { GroupsListProps } from './GroupsListProps';
 import type { GroupsMembersProps } from './GroupsMembersProps';
@@ -89,6 +89,9 @@ export type GroupsEndpoints = {
 	'/v1/groups.kick': {
 		POST: (params: GroupsKickProps) => void;
 	};
+	'/v1/groups.kickMultiple': {
+		POST: (params: GroupsKickMultipleProps) => void;
+	};
 	'/v1/groups.delete': {
 		POST: (params: GroupsDeleteProps) => void;
 	};
@@ -143,6 +146,9 @@ export type GroupsEndpoints = {
 		POST: (params: GroupsInviteProps) => {
 			group: IRoom;
 		};
+	};
+	'/v1/groups.inviteMultiple': {
+		POST: (params: GroupsInviteMultipleProps) => void;
 	};
 	'/v1/groups.list': {
 		GET: (params: GroupsListProps) => {
