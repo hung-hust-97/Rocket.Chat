@@ -37,7 +37,9 @@ export type BaseProps = GroupsBaseProps;
 export const baseSchema = withGroupBaseProperties();
 export const withBaseProps = ajv.compile<BaseProps>(baseSchema);
 
-export type WithUserId = GroupsBaseProps & { userId: string };
+export type WithUserId =
+	| (GroupsBaseProps & { userId: string })
+	| (GroupsBaseProps & { username: string });
 export const withUserIdSchema = withGroupBaseProperties(
 	{
 		userId: {
