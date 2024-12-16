@@ -41,6 +41,10 @@ export async function getUserListFromParams(params: {
 	userListParam.push(soleUser || '');
 	userListParam = userListParam.filter(Boolean);
 
+	if (soleUser) {
+		userListParam.push(soleUser);
+	}
+
 	// deduplicate to avoid errors
 	userListParam = [...new Set(userListParam)];
 
@@ -51,6 +55,6 @@ export async function getUserListFromParams(params: {
 	if (params.userIds || params.userId) {
 		return Users.findByIds(userListParam, { projection: { username: 1 } }).toArray();
 	}
-
+	console.log(userListParam);
 	return Users.findByUsernamesIgnoringCase(userListParam, { projection: { username: 1 } }).toArray();
 }

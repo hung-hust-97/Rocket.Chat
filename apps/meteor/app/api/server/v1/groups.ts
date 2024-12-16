@@ -1,3 +1,4 @@
+import { MongoInternals } from 'meteor/mongo';
 import { Team, isMeteorError } from '@rocket.chat/core-services';
 import type { IIntegration, IUser, IRoom, RoomType } from '@rocket.chat/core-typings';
 import { Integrations, Messages, Rooms, Subscriptions, Uploads, Users } from '@rocket.chat/models';
@@ -595,18 +596,19 @@ API.v1.addRoute(
       const { groupNames } = this.bodyParams; // Lấy groupNames và users từ bodyParams
 
       // Kiểm tra dữ liệu hợp lệ
-      if (!Array.isArray(groupNames) || groupNames.length === 0 || !Array.isArray(users) || users.length === 0) {
+      if (!Array.isArray(groupNames) || groupNames.length === 0) {
         return API.v1.failure('Invalid groupNames or users');
       }
 
       // Lấy thông tin người dùng từ bodyParams
-      const user = await getUserFromParams(this.bodyParams);
-      if (!user?.username) {
-        return API.v1.failure('Invalid user');
-      }
+      const users = await getUserListFromParams(this.bodyParams);
+	  if (!users.length) {
+		throw new Meteor.Error('error-empty-invite-list', 'Cannot invite if no valid users are provided');
+	}
 
       // Bắt đầu session cho giao dịch
-      const session = Rooms.rawDatabase().client.startSession();
+	  const client = MongoInternals.defaultRemoteCollectionDriver().mongo.client;
+	  const session = client.startSession();
 
       try {
         // Bắt đầu transaction
@@ -619,7 +621,7 @@ API.v1.addRoute(
           }
 
           // Thực hiện gọi Meteor method để mời người dùng
-          await Meteor.callAsync('addUsersToRoom', { rid: room._id, users: [user.username] });
+          await Meteor.callAsync('addUsersToRoom', { rid: room._id, users: users.map((u) => u.username) });
         }
 
         // Commit transaction nếu không có lỗi
@@ -679,7 +681,8 @@ API.v1.addRoute(
 		}
 
 		// Bắt đầu transaction
-		const session = Rooms.rawDatabase().client.startSession();
+		const client = MongoInternals.defaultRemoteCollectionDriver().mongo.client;
+		const session = client.startSession();
 
 		try {
 		  // Bắt đầu transaction
