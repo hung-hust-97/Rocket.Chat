@@ -4,7 +4,7 @@ import { withUserIdProps } from './BaseProps';
 export type GroupsKickProps = WithUserId;
 export type GroupsKickMultipleProps = {
     username: string;
-    groupIds: string[];
+    groupNames: string[];
 }
 
 export const isGroupsKickProps = withUserIdProps;

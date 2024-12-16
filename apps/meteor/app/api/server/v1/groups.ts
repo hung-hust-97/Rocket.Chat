@@ -588,31 +588,57 @@ API.v1.addRoute(
 );
 
 API.v1.addRoute(
-	'groups.inviteMultiple',
-	{ authRequired: true },
-	{
-		async post() {
-			const { groupIds } = this.bodyParams;
+  'groups.inviteMultiple',
+  { authRequired: true },
+  {
+    async post() {
+      const { groupNames } = this.bodyParams; // Lấy groupNames và users từ bodyParams
 
-			const user = await getUserFromParams(this.bodyParams);
-			if (!user?.username) {
-				return API.v1.failure('Invalid user');
-			}
+      // Kiểm tra dữ liệu hợp lệ
+      if (!Array.isArray(groupNames) || groupNames.length === 0 || !Array.isArray(users) || users.length === 0) {
+        return API.v1.failure('Invalid groupNames or users');
+      }
 
-			for (const groupId of groupIds) {
-				try {
-				  // Gọi Meteor method để thêm người dùng vào nhóm
-				  await Meteor.callAsync('addUsersToRoom', { rid: groupId, users: users.map((u) => u.username) });
-				} catch (error) {
-				  console.error(`Failed to invite users to group ${groupId}:`, error);
-				  return API.v1.failure(`Failed to invite users to group ${groupId}`);
-				}
-			  }
+      // Lấy thông tin người dùng từ bodyParams
+      const user = await getUserFromParams(this.bodyParams);
+      if (!user?.username) {
+        return API.v1.failure('Invalid user');
+      }
 
-			return API.v1.success();
-		},
-	},
+      // Bắt đầu session cho giao dịch
+      const session = Rooms.rawDatabase().client.startSession();
+
+      try {
+        // Bắt đầu transaction
+        session.startTransaction();
+
+        for (const groupName of groupNames) {
+          const room = await Rooms.findOneByIdOrName(groupName, { session }); // Dùng session trong query
+          if (!room || !room._id) {
+            throw new Error(`Group "${groupName}" does not exist`);
+          }
+
+          // Thực hiện gọi Meteor method để mời người dùng
+          await Meteor.callAsync('addUsersToRoom', { rid: room._id, users: [user.username] });
+        }
+
+        // Commit transaction nếu không có lỗi
+        await session.commitTransaction();
+        session.endSession();
+
+        return API.v1.success();
+      } catch (error) {
+        // Rollback transaction khi có lỗi
+        await session.abortTransaction();
+        session.endSession();
+
+        console.error('Transaction failed:', error);
+        return API.v1.failure("Failed to invite users to group");
+      }
+    },
+  }
 );
+
 
 API.v1.addRoute(
 	'groups.kick',
@@ -637,27 +663,56 @@ API.v1.addRoute(
 	'groups.kickMultiple',
 	{ authRequired: true },
 	{
-		async post() {
-			const user = await getUserFromParams(this.bodyParams);
-			const {groupIds} = this.bodyParams;
+	  async post() {
+		// Lấy thông tin user từ bodyParams
+		const user = await getUserFromParams(this.bodyParams);
+		const { groupNames } = this.bodyParams;
 
-			if (!Array.isArray(groupIds) || groupIds.length === 0) {
-				throw new Error('Invalid parameters: groupIds must be a non-empty array');
-			  }
+		// Kiểm tra tính hợp lệ của groupNames
+		if (!Array.isArray(groupNames) || groupNames.length === 0) {
+		  return API.v1.failure('Invalid parameters: groupNames must be a non-empty array');
+		}
 
-			if (!user?.username) {
-				return API.v1.failure('Invalid user');
+		// Kiểm tra tính hợp lệ của user
+		if (!user?.username) {
+		  return API.v1.failure('Invalid user');
+		}
+
+		// Bắt đầu transaction
+		const session = Rooms.rawDatabase().client.startSession();
+
+		try {
+		  // Bắt đầu transaction
+		  session.startTransaction();
+
+		  for (const groupName of groupNames) {
+			// Lấy thông tin room qua groupName
+			const room = await Rooms.findOneByName(groupName, { session });
+			if (!room || !room._id) {
+			  throw new Error(`Group "${groupName}" does not exist`);
 			}
 
-			for (const groupId of groupIds) {
-				const room = await getRoomFromParams(groupId);
-				await removeUserFromRoomMethod(this.userId, { rid: room._id, username: user.username });
-			}
+			// Xóa user khỏi phòng
+			await removeUserFromRoomMethod(this.userId, { rid: room._id, username: user.username });
+		  }
 
-			return API.v1.success();
-		},
-	},
-);
+		  // Commit transaction nếu không có lỗi
+		  await session.commitTransaction();
+		  session.endSession();
+
+		  return API.v1.success();
+		} catch (error) {
+		  // Rollback transaction nếu có lỗi
+		  await session.abortTransaction();
+		  session.endSession();
+
+		  console.error('Transaction failed:', error);
+		  return API.v1.failure('Failed to remove user from groups');
+		}
+	  },
+	}
+  );
+
 
 API.v1.addRoute(
 	'groups.leave',
