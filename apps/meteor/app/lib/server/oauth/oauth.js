@@ -50,5 +50,31 @@ Accounts.registerLoginHandler(async (options) => {
 	}
 
 	const oauthResult = await service.handleAccessTokenRequest(options);
-	return Accounts.updateOrCreateUserFromExternalService(service.serviceName, oauthResult.serviceData, oauthResult.options);
+	const { serviceData } = oauthResult;
+
+    // Tìm user theo email
+    let user = Meteor.users.findOne({ 'emails.address': serviceData.email });
+
+    if (user) {
+        // Nếu user tồn tại, thêm Keycloak vào service
+        Meteor.users.update(
+            { _id: user._id },
+            {
+                $set: {
+                    [`services.${options.serviceName}`]: serviceData,
+                },
+            }
+        );
+    } else {
+        // Nếu không tồn tại, tạo user mới
+        user = Accounts.updateOrCreateUserFromExternalService(
+            options.serviceName,
+            serviceData,
+            oauthResult.options
+        );
+    }
+
+    return { userId: user._id, type: options.serviceName };
+
+	// return Accounts.updateOrCreateUserFromExternalService(service.serviceName, oauthResult.serviceData, oauthResult.options);
 });

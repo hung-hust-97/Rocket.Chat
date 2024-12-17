@@ -331,87 +331,53 @@ export class CustomOAuth {
 				return;
 			}
 
-			if (serviceData.username || serviceData.email) {
-				// Tìm người dùng với username hoặc email trùng khớp
-				const user = await Users.findOne({
-					$or: [
-						{ username: serviceData.username },
-						{ "emails.address": serviceData.email },
-					],
-				});
+			if (serviceData.username) {
+				let user = undefined;
 
-				if (user) {
-					// Liên kết tài khoản dịch vụ
-					const serviceIdKey = `services.${serviceName}.id`;
-					const update = {
-						$set: {
-							name: serviceData.name,
-							...(serviceData.email && { emails: [{ address: serviceData.email, verified: true }] }),
-							[serviceIdKey]: serviceData.id,
-						},
-					};
+				if (this.keyField === 'username') {
+					user = this.mergeUsersDistinctServices
+						? await Users.findOneByUsernameIgnoringCase(serviceData.username)
+						: await Users.findOneByUsernameAndServiceNameIgnoringCase(serviceData.username, serviceData.id, serviceName);
+				} else if (this.keyField === 'email') {
+					user = this.mergeUsersDistinctServices
+						? await Users.findOneByEmailAddress(serviceData.email)
+						: await Users.findOneByEmailAddressAndServiceNameIgnoringCase(serviceData.email, serviceData.id, serviceName);
+				}
 
-					await Users.update({ _id: user._id }, update);
-
-					void notifyOnUserChange({ clientAction: 'updated', id: user._id, diff: update });
-					console.log(`Liên kết dịch vụ ${serviceName} cho người dùng ${user.username}`);
+				if (!user) {
 					return;
 				}
 
-				// Không tìm thấy user, cho phép tạo mới
-				console.log('Không tìm thấy người dùng, tiến hành tạo mới.');
+				await callbacks.run('afterProcessOAuthUser', { serviceName, serviceData, user });
+
+				// User already created or merged and has identical name as before
+				if (
+					user.services &&
+					user.services[serviceName] &&
+					user.services[serviceName].id === serviceData.id &&
+					user.name === serviceData.name &&
+					(this.keyField === 'email' || !serviceData.email || user.emails?.find(({ address }) => address === serviceData.email))
+				) {
+					return;
+				}
+
+				if (this.mergeUsers !== true) {
+					throw new Meteor.Error('CustomOAuth', `User with username ${user.username} already exists`);
+				}
+
+				const serviceIdKey = `services.${serviceName}.id`;
+				const update = {
+					$set: {
+						name: serviceData.name,
+						...(this.keyField === 'username' && serviceData.email && { emails: [{ address: serviceData.email, verified: true }] }),
+						[serviceIdKey]: serviceData.id,
+					},
+				};
+
+				await Users.update({ _id: user._id }, update);
+
+				void notifyOnUserChange({ clientAction: 'updated', id: user._id, diff: update });
 			}
-			// if (serviceName !== this.name) {
-			// 	return;
-			// }
-
-			// if (serviceData.username) {
-			// 	let user = undefined;
-
-			// 	if (this.keyField === 'username') {
-			// 		user = this.mergeUsersDistinctServices
-			// 			? await Users.findOneByUsernameIgnoringCase(serviceData.username)
-			// 			: await Users.findOneByUsernameAndServiceNameIgnoringCase(serviceData.username, serviceData.id, serviceName);
-			// 	} else if (this.keyField === 'email') {
-			// 		user = this.mergeUsersDistinctServices
-			// 			? await Users.findOneByEmailAddress(serviceData.email)
-			// 			: await Users.findOneByEmailAddressAndServiceNameIgnoringCase(serviceData.email, serviceData.id, serviceName);
-			// 	}
-
-			// 	if (!user) {
-			// 		return;
-			// 	}
-
-			// 	await callbacks.run('afterProcessOAuthUser', { serviceName, serviceData, user });
-
-			// 	// User already created or merged and has identical name as before
-			// 	if (
-			// 		user.services &&
-			// 		user.services[serviceName] &&
-			// 		user.services[serviceName].id === serviceData.id &&
-			// 		user.name === serviceData.name &&
-			// 		(this.keyField === 'email' || !serviceData.email || user.emails?.find(({ address }) => address === serviceData.email))
-			// 	) {
-			// 		return;
-			// 	}
-
-			// 	if (this.mergeUsers !== true) {
-			// 		throw new Meteor.Error('CustomOAuth', `User with username ${user.username} already exists`);
-			// 	}
-
-			// 	const serviceIdKey = `services.${serviceName}.id`;
-			// 	const update = {
-			// 		$set: {
-			// 			name: serviceData.name,
-			// 			...(this.keyField === 'username' && serviceData.email && { emails: [{ address: serviceData.email, verified: true }] }),
-			// 			[serviceIdKey]: serviceData.id,
-			// 		},
-			// 	};
-
-			// 	await Users.update({ _id: user._id }, update);
-
-			// 	void notifyOnUserChange({ clientAction: 'updated', id: user._id, diff: update });
-			// }
 		});
 
 		Accounts.validateNewUser((user) => {
