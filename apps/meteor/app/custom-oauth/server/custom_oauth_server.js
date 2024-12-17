@@ -404,7 +404,7 @@ export class CustomOAuth {
 	registerAccessTokenService(name) {
 		const self = this;
 		const whitelisted = ['id', 'email', 'username', 'name', this.rolesClaim];
-
+		console.log("registerAccessTokenService 1")
 		registerAccessTokenService(name, async (options) => {
 			check(
 				options,
@@ -423,6 +423,8 @@ export class CustomOAuth {
 
 			const fields = _.pick(identity, whitelisted);
 			_.extend(serviceData, fields);
+
+			console.log("registerAccessTokenService 2")
 
 			return {
 				serviceData,

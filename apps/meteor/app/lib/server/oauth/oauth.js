@@ -50,6 +50,6 @@ Accounts.registerLoginHandler(async (options) => {
 	}
 
 	const oauthResult = await service.handleAccessTokenRequest(options);
-
+	console.log("oauthResult: " + oauthResult)
 	return Accounts.updateOrCreateUserFromExternalService(service.serviceName, oauthResult.serviceData, oauthResult.options);
 });
