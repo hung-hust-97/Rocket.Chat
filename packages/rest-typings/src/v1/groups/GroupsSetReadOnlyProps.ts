@@ -8,6 +8,10 @@ const ajv = new Ajv({
 });
 
 export type GroupsSetReadOnlyProps = GroupsBaseProps & { readOnly: boolean };
+export type GroupsSetReadOnlyMultipleProps = {
+	readOnly: boolean,
+	roomIds: string[]
+};
 const groupsSetReadOnlyPropsSchema = withGroupBaseProperties(
 	{
 		readOnly: {

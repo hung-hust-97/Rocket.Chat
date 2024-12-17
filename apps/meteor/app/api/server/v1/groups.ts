@@ -1,3 +1,4 @@
+import { error } from './../../../../client/lib/asyncState/functions';
 import { MongoInternals } from 'meteor/mongo';
 import { Team, isMeteorError } from '@rocket.chat/core-services';
 import type { IIntegration, IUser, IRoom, RoomType } from '@rocket.chat/core-typings';
@@ -1155,6 +1156,56 @@ API.v1.addRoute(
 				group: await composeRoomWithLastMessage(room, this.userId),
 			});
 		},
+	},
+);
+
+API.v1.addRoute(
+	'groups.setReadOnlyMultiple',
+	{ authRequired: true },
+	{
+	  async post() {
+		// Kiểm tra xem tham số "readOnly" và "roomIds" có được cung cấp hay không
+		if (typeof this.bodyParams.readOnly === 'undefined') {
+		  return API.v1.failure('The bodyParam "readOnly" is required');
+		}
+
+		if (!Array.isArray(this.bodyParams.roomIds) || this.bodyParams.roomIds.length === 0) {
+		  return API.v1.failure('The bodyParam "roomIds" must be a non-empty array');
+		}
+
+		const client = MongoInternals.defaultRemoteCollectionDriver().mongo.client;
+		const session = client.startSession();
+
+		try {
+			session.startTransaction();
+			// Xử lý mỗi phòng trong danh sách roomIds
+			for (const roomId of this.bodyParams.roomIds) {
+				const findResult = await findPrivateGroupByIdOrName({
+					params: { roomId }, // Cung cấp roomId thay vì toàn bộ bodyParams
+					userId: this.userId,
+				});
+				const room = await Rooms.findOneById(findResult.rid, { projection: API.v1.defaultFieldsToExclude });
+				if (!room) {
+					// Nếu phòng không tồn tại, trả về lỗi
+					return API.v1.failure(`Room with ID ${roomId} does not exist`);
+				}
+				// Cập nhật cài đặt cho phòng
+				await saveRoomSettings(this.userId, findResult.rid, 'readOnly', this.bodyParams.readOnly);
+			}
+
+			await session.commitTransaction();
+			session.endSession();
+
+			return API.v1.success();
+		} catch(error) {
+			await session.abortTransaction();
+			session.endSession();
+
+			console.error('Transaction failed:', error);
+			return API.v1.failure('Failed to remove user from groups');
+		}
+		// Trả về kết quả của tất cả các phòng
+	  },
 	},
 );
 

@@ -34,7 +34,7 @@ import type { GroupsSetCustomFieldsProps } from './GroupsSetCustomFieldsProps';
 import type { GroupsSetDescriptionProps } from './GroupsSetDescriptionProps';
 import type { GroupsSetEncryptedProps } from './GroupsSetEncryptedProps';
 import type { GroupsSetPurposeProps } from './GroupsSetPurposeProps';
-import type { GroupsSetReadOnlyProps } from './GroupsSetReadOnlyProps';
+import type { GroupsSetReadOnlyMultipleProps, GroupsSetReadOnlyProps } from './GroupsSetReadOnlyProps';
 import type { GroupsSetTopicProps } from './GroupsSetTopicProps';
 import type { GroupsSetTypeProps } from './GroupsSetTypeProps';
 import type { GroupsUnarchiveProps } from './GroupsUnarchiveProps';
@@ -198,6 +198,9 @@ export type GroupsEndpoints = {
 		POST: (params: GroupsSetReadOnlyProps) => {
 			group: IRoom;
 		};
+	};
+	'/v1/groups.setReadOnlyMultiple': {
+		POST: (params: GroupsSetReadOnlyMultipleProps) => void;
 	};
 	'/v1/groups.setTopic': {
 		POST: (params: GroupsSetTopicProps) => {
