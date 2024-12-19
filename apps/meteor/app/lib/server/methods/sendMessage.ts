@@ -81,7 +81,6 @@ export async function executeSendMessage(uid: IUser['_id'], message: AtLeast<IMe
 
 	check(rid, String);
 
-	console.log(message.replyId);
 	if (message.replyId) {
 		const replyMessage = await Messages.findOneById(message.replyId, {
 			projection: { msg: 1, u: 1 },
@@ -95,7 +94,7 @@ export async function executeSendMessage(uid: IUser['_id'], message: AtLeast<IMe
 
 		message.reply = {
 			_id: replyMessage._id,
-			msg: replyMessage.msg,
+			msg: replyMessage.msg || replyMessage.file?.name || "",
 			username: replyMessage.u?.username,
 			name: replyMessage.u?.name
 		};
@@ -111,6 +110,8 @@ export async function executeSendMessage(uid: IUser['_id'], message: AtLeast<IMe
 				});
 			}
 		}
+
+		message.roomType = room.t;
 
 		metrics.messagesSent.inc(); // TODO This line needs to be moved to it's proper place. See the comments on: https://github.com/RocketChat/Rocket.Chat/pull/5736
 		return await sendMessage(user, message, room, false, previewUrls);
