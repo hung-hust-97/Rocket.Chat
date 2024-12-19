@@ -81,6 +81,7 @@ export async function executeSendMessage(uid: IUser['_id'], message: AtLeast<IMe
 
 	check(rid, String);
 
+	console.log(message.replyId);
 	if (message.replyId) {
 		const replyMessage = await Messages.findOneById(message.replyId, {
 			projection: { msg: 1, u: 1 },
@@ -92,12 +93,12 @@ export async function executeSendMessage(uid: IUser['_id'], message: AtLeast<IMe
 			});
 		}
 
-		(message as AtLeast<IMessage, 'rid'> & { reply?: any }).reply = {
-            _id: replyMessage._id,
-            msg: replyMessage.msg,
-            username: replyMessage.u?.username,
+		message.reply = {
+			_id: replyMessage._id,
+			msg: replyMessage.msg,
+			username: replyMessage.u?.username,
 			name: replyMessage.u?.name
-        };
+		};
 	}
 
 	try {
