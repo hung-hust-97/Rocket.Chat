@@ -81,6 +81,25 @@ export async function executeSendMessage(uid: IUser['_id'], message: AtLeast<IMe
 
 	check(rid, String);
 
+	if (message.replyId) {
+		const replyMessage = await Messages.findOneById(message.replyId, {
+			projection: { msg: 1, u: 1 },
+		});
+
+		if (!replyMessage) {
+			throw new Meteor.Error('error-invalid-reply', 'The reply message does not exist', {
+				method: 'sendMessage',
+			});
+		}
+
+		(message as AtLeast<IMessage, 'rid'> & { reply?: any }).reply = {
+            _id: replyMessage._id,
+            msg: replyMessage.msg,
+            username: replyMessage.u?.username,
+			name: replyMessage.u?.name
+        };
+	}
+
 	try {
 		const room = await canSendMessageAsync(rid, { uid, username: user.username, type: user.type });
 
