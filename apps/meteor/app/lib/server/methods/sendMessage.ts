@@ -94,10 +94,11 @@ export async function executeSendMessage(uid: IUser['_id'], message: AtLeast<IMe
 
 		message.reply = {
 			_id: replyMessage._id,
-			msg: replyMessage.msg || replyMessage.file?.name || "",
+			msg: (replyMessage.msg && replyMessage.msg.trim() !== "" ? replyMessage.msg : replyMessage.file?.name) || "",
 			username: replyMessage.u?.username,
 			name: replyMessage.u?.name
 		};
+
 	}
 
 	try {
