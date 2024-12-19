@@ -111,8 +111,6 @@ export async function executeSendMessage(uid: IUser['_id'], message: AtLeast<IMe
 			}
 		}
 
-		message.roomType = room.t;
-
 		metrics.messagesSent.inc(); // TODO This line needs to be moved to it's proper place. See the comments on: https://github.com/RocketChat/Rocket.Chat/pull/5736
 		return await sendMessage(user, message, room, false, previewUrls);
 	} catch (err: any) {
