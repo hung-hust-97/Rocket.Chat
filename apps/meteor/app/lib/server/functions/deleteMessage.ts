@@ -42,6 +42,22 @@ export async function deleteMessage(message: IMessage, user: IUser): Promise<voi
 		}
 	}
 
+	if (deletedMsg) {
+		const messagesToUpdate = await Messages.find({
+			'reply._id': deletedMsg._id,
+		}).toArray();
+
+		const updatePromises = messagesToUpdate.map((msg) => Messages.update({ _id: msg._id }, { $unset: { reply: 1, replyId: 1 } }));
+
+		await Promise.all(updatePromises);
+
+		const messagesToUpdateData = messagesToUpdate.map((msg) => ({
+			_id: msg._id,
+			u: msg.u,
+		}));
+		void api.broadcast('notify.deleteMessagesReplied', message.rid, { messages: messagesToUpdateData });
+	}
+
 	if (deletedMsg?.tmid) {
 		await Messages.decreaseReplyCountById(deletedMsg.tmid, -1);
 	}

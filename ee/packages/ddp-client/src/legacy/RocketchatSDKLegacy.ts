@@ -196,6 +196,7 @@ export class RocketchatSdkLegacyImpl extends DDPSDK implements RocketchatSDKLega
 			this.stream('room-messages', rid, (...args) => this.ev.emit('message', args)),
 			this.stream('notify-room', `${rid}/typing`, (...args) => this.ev.emit('typing', args)),
 			this.stream('notify-room', `${rid}/deleteMessage`, (...args) => this.ev.emit('deleteMessage', args)),
+			this.stream('notify-room', `${rid}/deleteMessagesReplied`, (...args) => this.ev.emit('deleteMessagesReplied', args)),
 		]);
 	}
 

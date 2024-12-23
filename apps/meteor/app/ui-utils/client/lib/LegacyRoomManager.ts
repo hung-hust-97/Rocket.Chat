@@ -146,6 +146,12 @@ const computation = Tracker.autorun(() => {
 						ChatMessage.update({ tmid: msg._id }, { $unset: { tmid: 1 } }, { multi: true });
 					});
 
+					sdk.stream('notify-room', [`${record.rid}/deleteMessagesReplied`], (msg) => {
+						msg.messages.forEach((msg) => {
+							ChatMessage.update({ _id: msg._id }, { $unset: { reply: 1, replyId: 1 } });
+						});
+					});
+
 					sdk.stream(
 						'notify-room',
 						[`${record.rid}/deleteMessageBulk`],
