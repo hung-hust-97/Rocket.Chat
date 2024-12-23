@@ -19,11 +19,15 @@ export async function saveUserIdentity({
 	name: rawName,
 	username: rawUsername,
 	updateUsernameInBackground = false,
+	active_tenant,
+	all_tenant,
 }: {
 	_id: string;
 	name?: string;
 	username?: string;
 	updateUsernameInBackground?: boolean; // TODO: remove this
+	active_tenant?: object;
+	all_tenant?: object;
 }) {
 	if (!_id) {
 		return false;
@@ -55,6 +59,38 @@ export async function saveUserIdentity({
 
 	if (typeof rawName !== 'undefined' && nameChanged) {
 		if (!(await _setRealName(_id, name, user))) {
+			return false;
+		}
+	}
+
+	if (active_tenant) {
+		user.services = user.services || {};
+		user.services.keycloak = user.services.keycloak || {};
+
+		user.services.keycloak.active_tenant = active_tenant;
+		if (!(await Users.updateOne(
+			{ _id },
+			{
+				$set: {
+					"services.keycloak.active_tenant": active_tenant,
+				}
+			}))) {
+			return false;
+		}
+	}
+
+	if (all_tenant) {
+		user.services = user.services || {};
+		user.services.keycloak = user.services.keycloak || {};
+		user.services.keycloak.all_tenant = all_tenant;
+		const updateResult = await Users.updateOne(
+				{ _id },
+				{
+					$push: {
+						"services.keycloak.all_tenant": all_tenant,
+					}
+				});
+		if (!updateResult.modifiedCount) {
 			return false;
 		}
 	}
@@ -145,7 +181,7 @@ async function updateUsernameReferences({
 		await Subscriptions.updateDirectNameAndFnameByName(previousUsername, rawUsername && username, rawName && name);
 
 		Rooms.relpaceName(previousUsername, name)
-		
+
 		// update name and fname of group direct messages
 		await updateGroupDMsName(user);
 

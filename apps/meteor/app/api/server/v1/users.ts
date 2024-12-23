@@ -548,10 +548,37 @@ API.v1.addRoute(
 				])
 				.toArray();
 
-			const {
+			let {
 				sortedResults: users,
 				totalCount: [{ total } = { total: 0 }],
 			} = result[0];
+
+			const currentUser = await Users.findOneById(this.userId);
+			const activeTenant = currentUser?.services?.keycloak?.active_tenant?.tenant_id;
+			if (activeTenant) {
+				users = await Promise.all(users.map(async (user) => {
+					const otherUser = await Users.findOneById(user._id);
+					if (!otherUser || otherUser._id === currentUser._id) {
+						return null;
+					}
+
+					const otherUserAllTenant = otherUser.services?.keycloak?.all_tenant;
+					if (Array.isArray(otherUserAllTenant)) {
+						let inTenant = false;
+						for (const tenant of otherUserAllTenant) {
+							const otherUserActiveTenant = tenant.tenant_id;
+							if (activeTenant === otherUserActiveTenant) {
+								inTenant = true;
+								break;
+							}
+						}
+						return inTenant ? user : null;
+					}
+
+					return null;
+				}));
+				users = users.filter((user) => user !== null);
+			}
 
 			return API.v1.success({
 				users,

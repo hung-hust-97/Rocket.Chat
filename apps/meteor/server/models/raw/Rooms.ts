@@ -1240,6 +1240,13 @@ export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
 					},
 				},
 			],
+			$nor: [
+				{
+					hidden: {
+						$elemMatch: { $eq: userId },
+					},
+				},
+			],
 		};
 
 		return this.find(query, options);
@@ -1271,6 +1278,13 @@ export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
 					},
 					_id: {
 						$in: ids,
+					},
+				},
+			],
+			$nor: [
+				{
+					hidden: {
+						$elemMatch: { $eq: userId },
 					},
 				},
 			],

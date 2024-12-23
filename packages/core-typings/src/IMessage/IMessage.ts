@@ -146,6 +146,7 @@ export interface IMessage extends IRocketChatRecord {
 	md?: Root;
 
 	_hidden?: boolean;
+	hidden: Array<string>;
 	imported?: boolean;
 	replies?: IUser['_id'][];
 	location?: {

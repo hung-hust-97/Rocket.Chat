@@ -101,6 +101,8 @@ export interface IRoom extends IRocketChatRecord {
 	sidepanel?: {
 		items: [SidepanelItem, SidepanelItem?];
 	};
+
+	hidden?: Array<string>;
 }
 
 export const isSidepanelItem = (item: any): item is SidepanelItem => {

@@ -14,7 +14,7 @@ API.v1.addRoute(
 	{ authRequired: true },
 	{
 		async post() {
-			const { id, type, value, appName } = this.bodyParams;
+			const { id, type, value, appName, deviceType } = this.bodyParams;
 
 			if (id && typeof id !== 'string') {
 				throw new Meteor.Error('error-id-param-not-valid', 'The required "id" body param is invalid.');
@@ -30,6 +30,11 @@ API.v1.addRoute(
 				throw new Meteor.Error('error-token-param-not-valid', 'The required "value" body param is missing or invalid.');
 			}
 
+			const validDeviceTypes = ['DESKTOP', 'WEB', 'IOS', 'ANDROID'];
+			if (!deviceType || !validDeviceTypes.includes(deviceType)) {
+				throw new Meteor.Error('error-deviceType-param-not-valid', 'The required "deviceType" body param is missing or invalid.');
+			}
+
 			if (!appName || typeof appName !== 'string') {
 				throw new Meteor.Error('error-appName-param-not-valid', 'The required "appName" body param is missing or invalid.');
 			}
@@ -37,6 +42,7 @@ API.v1.addRoute(
 			const result = await Meteor.callAsync('raix:push-update', {
 				id: deviceId,
 				token: { [type]: value },
+				deviceType: deviceType,
 				authToken: this.request.headers['x-auth-token'],
 				appName,
 				userId: this.userId,
