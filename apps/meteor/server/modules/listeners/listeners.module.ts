@@ -414,6 +414,10 @@ export class ListenersModule {
 			notifications.notifyRoomInThisInstance(rid, 'deleteMessage', data);
 		});
 
+		service.onEvent('notify.deleteMessagesReplied', (rid, data): void => {
+			notifications.notifyRoomInThisInstance(rid, 'deleteMessagesReplied', data);
+		});
+
 		service.onEvent('notify.deleteMessageBulk', (rid, data): void => {
 			notifications.notifyRoomInThisInstance(rid, 'deleteMessageBulk', data);
 		});
