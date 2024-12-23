@@ -94,6 +94,15 @@ export type EventSignatures = {
 	): void;
 	'notify.e2e.keyRequest'(rid: string, data: IRoom['e2eKeyId']): void;
 	'notify.deleteMessage'(rid: string, data: { _id: string }): void;
+	'notify.deleteMessagesReplied'(
+		rid: string,
+		data: {
+			messages: {
+				_id: string;
+				u: object;
+			}[];
+		},
+	): void;
 	'notify.deleteMessageBulk'(
 		rid: string,
 		data: {

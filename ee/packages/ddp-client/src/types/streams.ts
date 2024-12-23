@@ -60,6 +60,7 @@ export interface StreamerEvents {
 			];
 		},
 		{ key: `${string}/deleteMessage`; args: [{ _id: IMessage['_id'] }] },
+		{ key: `${string}/deleteMessagesReplied`; args: [{ messages: { _id: string; u: object }[] }] },
 		{ key: `${string}/e2e.keyRequest`; args: [unknown] },
 		{ key: `${string}/videoconf`; args: [id: string] },
 		{ key: `${string}/messagesRead`; args: [{ until: Date; tmid?: string }] },
