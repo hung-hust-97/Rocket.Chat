@@ -865,8 +865,9 @@ API.v1.addRoute(
 				userId: this.userId,
 			});
 			const { offset, count } = await getPaginationItems(this.queryParams);
-			const { sort, fields, query } = await this.parseJsonQuery();
+			const { sort, fields } = await this.parseJsonQuery();
 
+			const query = {"$and":[{"tmid":{"$exists":false}},{"t":{"$exists":false}}]};
 			const ourQuery = Object.assign({}, query, { rid: findResult.rid });
 
 			const { cursor, totalCount } = await Messages.findPaginated(ourQuery, {
