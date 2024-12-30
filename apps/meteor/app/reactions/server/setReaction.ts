@@ -19,10 +19,25 @@ const removeUserReaction = (message: IMessage, reaction: string, username: strin
 		return message;
 	}
 
-	message.reactions[reaction].usernames.splice(message.reactions[reaction].usernames.indexOf(username), 1);
-	if (message.reactions[reaction].usernames.length === 0) {
-		delete message.reactions[reaction];
+	// message.reactions[reaction].usernames.splice(message.reactions[reaction].usernames.indexOf(username), 1);
+	// if (message.reactions[reaction].usernames.length === 0) {
+	// 	delete message.reactions[reaction];
+	// }
+
+	const index = message.reactions[reaction].usernames.findIndex(
+		(userObj: any) => userObj.username === username
+	);
+
+	// Remove the user object if it exists
+	if (index !== -1) {
+		message.reactions[reaction].usernames.splice(index, 1);
+
+		// If no more usernames remain for the reaction, delete the reaction
+		if (message.reactions[reaction].usernames.length === 0) {
+			delete message.reactions[reaction];
+		}
 	}
+
 	return message;
 };
 
@@ -55,7 +70,10 @@ async function setReaction(room: IRoom, user: IUser, message: IMessage, reaction
 	const userAlreadyReacted =
 		message.reactions &&
 		Boolean(message.reactions[reaction]) &&
-		message.reactions[reaction].usernames.indexOf(user.username as string) !== -1;
+		// message.reactions[reaction].usernames.indexOf(user.username as string) !== -1;
+		message.reactions[reaction].usernames.some(
+			(userObj: any) => userObj.username === user.username
+		);
 	// When shouldReact was not informed, toggle the reaction.
 	if (shouldReact === undefined) {
 		shouldReact = !userAlreadyReacted;
@@ -96,7 +114,7 @@ async function setReaction(room: IRoom, user: IUser, message: IMessage, reaction
 				usernames: [],
 			};
 		}
-		message.reactions[reaction].usernames.push(user.username as string);
+		message.reactions[reaction].usernames.push({ name: user.name, username: user.username });
 		await Messages.setReactions(message._id, message.reactions);
 		if (isTheLastMessage(room, message)) {
 			await Rooms.setReactionsInLastMessage(room._id, message.reactions);
