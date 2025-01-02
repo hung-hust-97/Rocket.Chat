@@ -691,7 +691,7 @@ API.v1.addRoute(
 
 		  for (const groupId of groupIds) {
 			// Lấy thông tin room qua groupName
-			const room = await Rooms.findOneByName(groupId, { session });
+			const room = await Rooms.findOneByIdOrName(groupId, { session });
 			if (!room || !room._id) {
 			  throw new Error(`Group "${groupId}" does not exist`);
 			}
