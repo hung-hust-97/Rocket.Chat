@@ -669,11 +669,11 @@ API.v1.addRoute(
 	  async post() {
 		// Lấy thông tin user từ bodyParams
 		const user = await getUserFromParams(this.bodyParams);
-		const { groupNames } = this.bodyParams;
+		const { groupIds } = this.bodyParams;
 
 		// Kiểm tra tính hợp lệ của groupNames
-		if (!Array.isArray(groupNames) || groupNames.length === 0) {
-		  return API.v1.failure('Invalid parameters: groupNames must be a non-empty array');
+		if (!Array.isArray(groupIds) || groupIds.length === 0) {
+		  return API.v1.failure('Invalid parameters: groupIds must be a non-empty array');
 		}
 
 		// Kiểm tra tính hợp lệ của user
@@ -689,11 +689,11 @@ API.v1.addRoute(
 		  // Bắt đầu transaction
 		  session.startTransaction();
 
-		  for (const groupName of groupNames) {
+		  for (const groupId of groupIds) {
 			// Lấy thông tin room qua groupName
-			const room = await Rooms.findOneByName(groupName, { session });
+			const room = await Rooms.findOneByName(groupId, { session });
 			if (!room || !room._id) {
-			  throw new Error(`Group "${groupName}" does not exist`);
+			  throw new Error(`Group "${groupId}" does not exist`);
 			}
 
 			// Xóa user khỏi phòng
