@@ -594,10 +594,10 @@ API.v1.addRoute(
   { authRequired: true },
   {
     async post() {
-      const { groupNames } = this.bodyParams; // Lấy groupNames và users từ bodyParams
+      const { groupIds } = this.bodyParams; // Lấy groupNames và users từ bodyParams
 
       // Kiểm tra dữ liệu hợp lệ
-      if (!Array.isArray(groupNames) || groupNames.length === 0) {
+      if (!Array.isArray(groupIds) || groupIds.length === 0) {
         return API.v1.failure('Invalid groupNames or users');
       }
 
@@ -615,10 +615,10 @@ API.v1.addRoute(
         // Bắt đầu transaction
         session.startTransaction();
 
-        for (const groupName of groupNames) {
-          const room = await Rooms.findOneByIdOrName(groupName, { session }); // Dùng session trong query
+        for (const groupId of groupIds) {
+          const room = await Rooms.findOneByIdOrName(groupId, { session }); // Dùng session trong query
           if (!room || !room._id) {
-            throw new Error(`Group "${groupName}" does not exist`);
+            throw new Error(`Group "${groupId}" does not exist`);
           }
 
           // Thực hiện gọi Meteor method để mời người dùng
