@@ -1141,10 +1141,6 @@ API.v1.addRoute(
 				userId: this.userId,
 			});
 
-			if (findResult.ro === this.bodyParams.readOnly) {
-				return API.v1.failure('The private group read only setting is the same as what it would be changed to.');
-			}
-
 			await saveRoomSettings(this.userId, findResult.rid, 'readOnly', this.bodyParams.readOnly);
 
 			const room = await Rooms.findOneById(findResult.rid, { projection: API.v1.defaultFieldsToExclude });
