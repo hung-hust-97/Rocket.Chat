@@ -23,6 +23,8 @@ export type UsersUpdateParamsPOST = {
 		verified?: boolean;
 		customFields?: Record<string, unknown>;
 		status?: string;
+		active_tenant?: object;
+		all_tenant?: object;
 	};
 	confirmRelinquish?: boolean;
 };
@@ -106,6 +108,32 @@ const UsersUpdateParamsPostSchema = {
 					type: 'string',
 					nullable: true,
 				},
+				active_tenant: {
+					type: 'object',
+					properties: {
+						tenant_id: { type: 'string' },
+						tenant_name: { type: 'string' },
+						roles: {
+							type: 'array',
+							items: { type: 'string', }
+						},
+					},
+					required: ['tenant_id', 'tenant_name', 'roles'],
+					nullable: true,
+				},
+				all_tenant: {
+					type: 'object',
+					properties: {
+						tenant_id: { type: 'string' },
+						tenant_name: { type: 'string' },
+						roles: {
+							type: 'array',
+							items: { type: 'string', }
+						},
+					},
+					required: ['tenant_id', 'tenant_name', 'roles'],
+					nullable: true,
+				}
 			},
 			required: [],
 			additionalProperties: false,

@@ -9,6 +9,7 @@ import { getPushData } from '../../../lib/server/functions/notifications/mobile'
 import { metrics } from '../../../metrics/server';
 import { Push } from '../../../push/server';
 import { settings } from '../../../settings/server';
+import { getFullUserDataByIdOrUsernameOrImportId } from '/app/lib/server/functions/getFullUserData';
 
 type PushNotificationData = {
 	rid: string;
@@ -48,7 +49,7 @@ class PushNotification {
 		return hash(`${serverId}|${roomId}`); // hash
 	}
 
-	private getNotificationConfig({
+	private async getNotificationConfig({
 		rid,
 		uid: userId,
 		mid: messageId,
@@ -59,8 +60,9 @@ class PushNotification {
 		badge = 1,
 		category,
 		idOnly = false,
-	}: GetNotificationConfigParam): IPushNotificationConfig {
-		const title = idOnly ? '' : roomName || username;
+	}: GetNotificationConfigParam): Promise<IPushNotificationConfig> {
+		const user = await getFullUserDataByIdOrUsernameOrImportId(userId, username, "username");
+		const title = idOnly ? '' : roomName || user?.name || username;
 
 		// message is being redacted already by 'getPushData' if idOnly is true
 		const text = !idOnly && roomName !== '' ? `${username}: ${message}` : message;
@@ -104,7 +106,7 @@ class PushNotification {
 		});
 
 		metrics.notificationsSent.inc({ notification_type: 'mobile' });
-		await Push.send(config);
+		await Push.send(await config);
 	}
 
 	async getNotificationForMessageId({
@@ -138,15 +140,17 @@ class PushNotification {
 			shouldOmitMessage: false,
 		});
 
+		const notification = await this.getNotificationConfig({
+			...pushData,
+			rid: message.rid,
+			uid: message.u._id,
+			mid: message._id,
+			idOnly: false,
+		});
+
 		return {
 			message,
-			notification: this.getNotificationConfig({
-				...pushData,
-				rid: message.rid,
-				uid: message.u._id,
-				mid: message._id,
-				idOnly: false,
-			}),
+			notification: notification,
 		};
 	}
 }

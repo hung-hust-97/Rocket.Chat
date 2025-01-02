@@ -453,9 +453,39 @@ API.v1.addRoute(
 
 			// TODO: CACHE: Add Breaking notice since we removed the query param
 
-			const subscriptions = await Subscriptions.find({ 'u._id': this.userId, 't': 'd' }, { projection: { rid: 1 } })
+			let subscriptions: (string | null)[] = await Subscriptions.find({ 'u._id': this.userId, 't': 'd' }, { projection: { rid: 1 } })
 				.map((item) => item.rid)
 				.toArray();
+
+			// Remove hidden room
+			subscriptions = await Promise.all(subscriptions.map(async (roomId) => {
+				const room = await Rooms.findOneById(roomId);
+				return !(room && room.hidden && room.hidden.includes(this.userId)) ? roomId : null;
+			}));
+			subscriptions = subscriptions.filter((roomId) => roomId !== null);
+
+			// Remove rooms of users who are not in the same tenant
+			const user = await Users.findOneById(this.userId);
+			const activeTenant = user?.services?.keycloak?.active_tenant?.tenant_id;
+			subscriptions = await Promise.all(subscriptions.map(async (roomId) => {
+				const room = await Rooms.findOneById(roomId);
+				const oppositeUserId = room?.uids?.filter(userId => userId !== this.userId)[0];
+				const oppositeUser = oppositeUserId ? await Users.findOneById(oppositeUserId) : null;
+				const oppositeUserAllTenant = oppositeUser?.services?.keycloak?.all_tenant;
+				if (Array.isArray(oppositeUserAllTenant)) {
+					let inTenant = false;
+					for (const tenant of oppositeUserAllTenant) {
+						const tenantId = tenant.tenant_id;
+						if (activeTenant === tenantId) {
+							inTenant = true;
+							break;
+						}
+					}
+					return inTenant ? roomId : null;
+				}
+				return null;
+			}));
+			subscriptions = subscriptions.filter((roomId) => roomId !== null);
 
 			const { cursor, totalCount } = Rooms.findPaginated(
 				{ ...query, t: 'd', _id: { $in: subscriptions } },

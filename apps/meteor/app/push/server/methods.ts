@@ -1,4 +1,4 @@
-import type { IAppsTokens } from '@rocket.chat/core-typings';
+import type { IAppsTokens, IDeviceTypes } from '@rocket.chat/core-typings';
 import type { ServerMethods } from '@rocket.chat/ddp-client';
 import { AppsTokens } from '@rocket.chat/models';
 import { Random } from '@rocket.chat/random';
@@ -15,6 +15,7 @@ declare module '@rocket.chat/ddp-client' {
 		'raix:push-update'(options: {
 			id?: string;
 			token: IAppsTokens['token'];
+			deviceType: IDeviceTypes;
 			authToken: string;
 			appName: string;
 			userId?: string;
@@ -31,6 +32,7 @@ Meteor.methods<ServerMethods>({
 		check(options, {
 			id: Match.Optional(String),
 			token: _matchToken,
+			deviceType: String,
 			authToken: String,
 			appName: String,
 			userId: Match.OneOf(String, null),
@@ -71,6 +73,7 @@ Meteor.methods<ServerMethods>({
 			// Rig default doc
 			doc = {
 				token: options.token,
+				deviceType: options.deviceType,
 				authToken: hashedToken,
 				appName: options.appName,
 				userId: options.userId,
@@ -97,10 +100,15 @@ Meteor.methods<ServerMethods>({
 					$set: {
 						updatedAt: new Date(),
 						token: options.token,
+						deviceType: options.deviceType,
 						authToken: hashedToken,
+						userId: options.userId,
 					},
 				},
 			);
+			// update doc after update app in the database
+			const updatedDoc = await AppsTokens.findOne({ _id: doc._id });
+			Object.assign(doc, updatedDoc);
 		}
 
 		if (doc.token) {
@@ -115,8 +123,25 @@ Meteor.methods<ServerMethods>({
 				})
 			).deletedCount;
 
+			// remove tokens on devices of the same type
+			const removedTokensByDeviceType = (
+				await AppsTokens.deleteMany({
+					$and: [
+						{ _id: { $ne: doc._id } },
+						{ deviceType: doc.deviceType },
+						{ appName: doc.appName },
+						{ userId: doc.userId },
+						{ deviceType: { $exists: true } },
+					],
+				})
+			).deletedCount;
+
 			if (removed) {
 				logger.debug(`Removed ${removed} existing app items`);
+			}
+
+			if (removedTokensByDeviceType) {
+				logger.debug(`Removed ${removedTokensByDeviceType} existing app items of ${doc.deviceType}`);
 			}
 		}
 

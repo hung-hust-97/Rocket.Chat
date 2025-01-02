@@ -1,11 +1,12 @@
 import { AppEvents, Apps } from '@rocket.chat/apps';
 import { Message, Team } from '@rocket.chat/core-services';
-import { Rooms } from '@rocket.chat/models';
+import { Rooms, Messages } from '@rocket.chat/models';
 import { Meteor } from 'meteor/meteor';
 
 import { hasPermissionAsync } from '../../app/authorization/server/functions/hasPermission';
 import { deleteRoom } from '../../app/lib/server/functions/deleteRoom';
 import { roomCoordinator } from './rooms/roomCoordinator';
+import { loadMessageHistory } from '/app/lib/server/functions/loadMessageHistory';
 
 export async function eraseRoom(rid: string, uid: string): Promise<void> {
 	const room = await Rooms.findOneById(rid);
@@ -22,14 +23,16 @@ export async function eraseRoom(rid: string, uid: string): Promise<void> {
 		});
 	}
 
-	if (
-		!(await roomCoordinator
-			.getRoomDirectives(room.t)
-			?.canBeDeleted((permissionId, rid) => hasPermissionAsync(uid, permissionId, rid), room))
-	) {
-		throw new Meteor.Error('error-not-allowed', 'Not allowed', {
-			method: 'eraseRoom',
-		});
+	if (room.t !== 'd') {
+		if (
+			!(await roomCoordinator
+				.getRoomDirectives(room.t)
+				?.canBeDeleted((permissionId, rid) => hasPermissionAsync(uid, permissionId, rid), room))
+		) {
+			throw new Meteor.Error('error-not-allowed', 'Not allowed', {
+				method: 'eraseRoom',
+			});
+		}
 	}
 
 	if (Apps.self?.isLoaded()) {
@@ -39,7 +42,21 @@ export async function eraseRoom(rid: string, uid: string): Promise<void> {
 		}
 	}
 
-	await deleteRoom(rid);
+	if (room.t !== 'd') {
+		await deleteRoom(rid);
+	} else {
+		await Rooms.update(
+			{ _id: rid },
+			{ $addToSet: { hidden: uid } }
+		);
+		const messages = await loadMessageHistory({ rid, end: new Date() })
+		for (const message of messages.messages) {
+			await Messages.update(
+				{ _id: message._id },
+				{ $addToSet: { hidden: uid } }
+			);
+		}
+	}
 
 	const team = room.teamId && (await Team.getOneById(room.teamId));
 
