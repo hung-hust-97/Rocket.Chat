@@ -467,25 +467,24 @@ API.v1.addRoute(
 			// Remove rooms of users who are not in the same tenant
 			const user = await Users.findOneById(this.userId);
 			const activeTenant = user?.services?.keycloak?.active_tenant?.tenant_id;
-			subscriptions = await Promise.all(subscriptions.map(async (roomId) => {
-				const room = await Rooms.findOneById(roomId);
-				const oppositeUserId = room?.uids?.filter(userId => userId !== this.userId)[0];
-				const oppositeUser = oppositeUserId ? await Users.findOneById(oppositeUserId) : null;
-				const oppositeUserAllTenant = oppositeUser?.services?.keycloak?.all_tenant;
-				if (Array.isArray(oppositeUserAllTenant)) {
-					let inTenant = false;
-					for (const tenant of oppositeUserAllTenant) {
-						const tenantId = tenant.tenant_id;
-						if (activeTenant === tenantId) {
-							inTenant = true;
-							break;
-						}
-					}
-					return inTenant ? roomId : null;
-				}
-				return null;
+
+			subscriptions = await Promise.all(
+				subscriptions.map(async (roomId) => {
+					const room = await Rooms.findOneById(roomId);
+					if (!room) return null;
+
+					const oppositeUserId = room.uids?.find(userId => userId !== this.userId);
+					if (!oppositeUserId) return null;
+
+					const oppositeUser = await Users.findOneById(oppositeUserId);
+					const oppositeUserAllTenant = oppositeUser?.services?.keycloak?.all_tenant;
+
+					return Array.isArray(oppositeUserAllTenant) &&
+						oppositeUserAllTenant.some(tenant => tenant.tenant_id === activeTenant)
+							? roomId
+							: null;
 			}));
-			subscriptions = subscriptions.filter((roomId) => roomId !== null);
+			subscriptions = subscriptions.filter(Boolean);
 
 			const { cursor, totalCount } = Rooms.findPaginated(
 				{ ...query, t: 'd', _id: { $in: subscriptions } },

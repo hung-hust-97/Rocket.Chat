@@ -555,29 +555,21 @@ API.v1.addRoute(
 
 			const currentUser = await Users.findOneById(this.userId);
 			const activeTenant = currentUser?.services?.keycloak?.active_tenant?.tenant_id;
+
 			if (activeTenant) {
-				users = await Promise.all(users.map(async (user) => {
-					const otherUser = await Users.findOneById(user._id);
-					if (!otherUser || otherUser._id === currentUser._id) {
-						return null;
-					}
+				users = await Promise.all(
+					users.map(async (user) => {
+						if (user._id === currentUser._id) return null;
 
-					const otherUserAllTenant = otherUser.services?.keycloak?.all_tenant;
-					if (Array.isArray(otherUserAllTenant)) {
-						let inTenant = false;
-						for (const tenant of otherUserAllTenant) {
-							const otherUserActiveTenant = tenant.tenant_id;
-							if (activeTenant === otherUserActiveTenant) {
-								inTenant = true;
-								break;
-							}
-						}
-						return inTenant ? user : null;
-					}
+						const otherUser = await Users.findOneById(user._id);
+						const otherUserTenants = otherUser?.services?.keycloak?.all_tenant;
 
-					return null;
-				}));
-				users = users.filter((user) => user !== null);
+						return Array.isArray(otherUserTenants) &&
+							otherUserTenants.some(tenant => tenant.tenant_id === activeTenant)
+								? user
+								: null;
+					}));
+				users = users.filter(Boolean);
 			}
 
 			return API.v1.success({
