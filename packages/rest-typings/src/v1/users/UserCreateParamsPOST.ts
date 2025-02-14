@@ -22,6 +22,7 @@ export type UserCreateParamsPOST = {
 	customFields?: object;
 	/* @deprecated */
 	fields: string;
+	all_tenant?: object;
 };
 
 const userCreateParamsPostSchema = {
@@ -43,6 +44,19 @@ const userCreateParamsPostSchema = {
 		verified: { type: 'boolean', nullable: true },
 		customFields: { type: 'object' },
 		fields: { type: 'string', nullable: true },
+		all_tenant: {
+			type: 'object',
+			properties: {
+				tenant_id: { type: 'string' },
+				tenant_name: { type: 'string' },
+				roles: {
+					type: 'array',
+					items: { type: 'string', }
+				},
+			},
+			required: ['tenant_id', 'tenant_name', 'roles'],
+			nullable: true,
+		}
 	},
 	additionalProperties: false,
 	required: ['email', 'name', 'password', 'username'],

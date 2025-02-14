@@ -293,10 +293,14 @@ const saveNewUser = async function (userData, sendPassword) {
 
 	const _id = await Accounts.createUserAsync(createUser);
 
+	let all_tenant = [];
+	all_tenant.push(userData.all_tenant);
+
 	const updateUser = {
 		$set: {
 			...(typeof userData.name !== 'undefined' && { name: userData.name }),
 			settings: userData.settings || {},
+			"services.keycloak": { all_tenant },
 		},
 	};
 

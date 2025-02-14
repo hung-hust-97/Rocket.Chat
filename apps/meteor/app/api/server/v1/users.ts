@@ -280,6 +280,12 @@ API.v1.addRoute(
 	},
 );
 
+// API.v1.addRoute(
+// 	'users.deleteFromTenant',
+// 	{ authRequired: true, Params: { tenantId } },
+//
+// )
+
 API.v1.addRoute(
 	'users.create',
 	{ authRequired: true, validateParams: isUserCreateParamsPOST },
