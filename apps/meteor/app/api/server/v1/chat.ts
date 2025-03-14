@@ -839,3 +839,51 @@ API.v1.addRoute(
 		},
 	},
 );
+
+API.v1.addRoute(
+	'chat.lists',
+	{ authRequired: true },
+	{
+		async get() {
+			const { offset, count } = await getPaginationItems(this.queryParams);
+			const { sort, fields } = await this.parseJsonQuery();
+
+			const subsIms = await Subscriptions.find(
+				{ 'u._id': this.userId, t: 'd' },
+				{ projection: { rid: 1 } }
+			).toArray();
+			const imRids = subsIms.map((item) => item.rid);
+
+			const subsGroups = await Subscriptions.findByUserIdAndTypes(this.userId, ['p'], { projection: { rid: 1 } }).toArray();
+			const groupRids = subsGroups.map(({ rid }) => rid);
+
+			const allRoomIds = [...imRids, ...groupRids];
+
+			const roomCursor = Rooms.findPaginated(
+				{
+					_id: { $in: allRoomIds, $nin: [/rocket\.cat/, /general/] },
+					$or: [
+						{ t: 'd' },
+						{ t: 'p', 'customFields.notInMeeting': true },
+					],
+				},
+				{
+					sort: sort,
+					skip: offset,
+					limit: count,
+					projection: fields,
+				}
+			);
+
+			const [chats, total] = await Promise.all([
+				roomCursor.cursor.toArray(),
+				roomCursor.totalCount,
+			]);
+
+			return API.v1.success({
+				chats,
+				total,
+			});
+		},
+	}
+);

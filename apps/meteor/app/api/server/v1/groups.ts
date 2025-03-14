@@ -331,6 +331,7 @@ API.v1.addRoute(
 				const result = await createPrivateGroupMethod(
 					this.user,
 					this.bodyParams.name,
+					this.bodyParams.fname,
 					this.bodyParams.members ? this.bodyParams.members : [],
 					readOnly,
 					this.bodyParams.customFields,

@@ -23,6 +23,7 @@ declare module '@rocket.chat/ddp-client' {
 export const createPrivateGroupMethod = async (
 	user: IUser,
 	name: string,
+	fname: string,
 	members: string[],
 	readOnly = false,
 	customFields = {},
@@ -40,7 +41,7 @@ export const createPrivateGroupMethod = async (
 		throw new Meteor.Error('error-not-allowed', 'Not allowed', { method: 'createPrivateGroup' });
 	}
 
-	return createRoom('p', name, user, members, excludeSelf, readOnly, {
+	return createRoom('p', name, fname, user, members, excludeSelf, readOnly, {
 		customFields,
 		...extraData,
 	});

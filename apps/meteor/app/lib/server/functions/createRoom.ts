@@ -16,7 +16,7 @@ import { notifyOnRoomChanged } from '../lib/notifyListener';
 import { createDirectRoom } from './createDirectRoom';
 
 const isValidName = (name: unknown): name is string => {
-	return typeof name === 'string' && name.trim().length > 0;
+	return typeof name === 'string';
 };
 
 const onlyUsernames = (members: unknown): members is string[] =>
@@ -106,6 +106,7 @@ async function createUsersSubscriptions({
 export const createRoom = async <T extends RoomType>(
 	type: T,
 	name: T extends 'd' ? undefined : string,
+	fname: T extends 'd' ? undefined : string,
 	owner: T extends 'd' ? IUser | undefined : IUser,
 	members: T extends 'd' ? IUser[] : string[] = [],
 	excludeSelf?: boolean,
@@ -174,7 +175,7 @@ export const createRoom = async <T extends RoomType>(
 	const now = new Date();
 
 	const roomProps: Omit<IRoom, '_id' | '_updatedAt'> = {
-		fname: name,
+		fname: fname,
 		_updatedAt: now,
 		...extraData,
 		name: isDiscussion ? name : await getValidRoomName(name.trim(), undefined),
