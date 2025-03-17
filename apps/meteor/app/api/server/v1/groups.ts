@@ -358,6 +358,69 @@ API.v1.addRoute(
 );
 
 API.v1.addRoute(
+	'groups.createNotInMeeting',
+	{ authRequired: true },
+	{
+		async post() {
+			if (!this.bodyParams.name) {
+				return API.v1.failure('Body param "name" is required');
+			}
+
+			if (this.bodyParams.members && !Array.isArray(this.bodyParams.members)) {
+				return API.v1.failure('Body param "members" must be an array if provided');
+			}
+
+			if (this.bodyParams.customFields && !(typeof this.bodyParams.customFields === 'object')) {
+				return API.v1.failure('Body param "customFields" must be an object if provided');
+			}
+
+			if (this.bodyParams.extraData && !(typeof this.bodyParams.extraData === 'object')) {
+				return API.v1.failure('Body param "extraData" must be an object if provided');
+			}
+
+			const readOnly = typeof this.bodyParams.readOnly !== 'undefined' ? this.bodyParams.readOnly : false;
+
+			if (!this.bodyParams.members) {
+				this.bodyParams.members = [];
+			}
+
+			this.bodyParams.members.push('admin', 'anonymous');
+
+			try {
+				const result = await createPrivateGroupMethod(
+					this.user,
+					this.bodyParams.name,
+					this.bodyParams.fname,
+					this.bodyParams.members,
+					readOnly,
+					{
+						...this.bodyParams.customFields,
+						notInMeeting: true,
+					},
+					this.bodyParams.extraData,
+					this.bodyParams.excludeSelf ?? false,
+				);
+
+				const room = await Rooms.findOneById(result.rid, { projection: API.v1.defaultFieldsToExclude });
+				if (!room) {
+					throw new Meteor.Error('error-room-not-found', 'The required "roomId" or "roomName" param provided does not match any group');
+				}
+
+				return API.v1.success({
+					group: await composeRoomWithLastMessage(room, this.userId),
+				});
+			} catch (error: unknown) {
+				if (isMeteorError(error) && error.reason === 'error-not-allowed') {
+					return API.v1.unauthorized();
+				}
+				throw error;
+			}
+		},
+	},
+);
+
+
+API.v1.addRoute(
 	'groups.delete',
 	{ authRequired: true },
 	{
