@@ -1024,7 +1024,7 @@ export class ImportDataConverter {
 					if (!user) {
 						throw new Error('importer-channel-invalid-creator');
 					}
-					roomInfo = await createPrivateGroupMethod(user, roomData.name, members, false, {}, {});
+					roomInfo = await createPrivateGroupMethod(user, roomData.name, undefined, members, false, {}, {});
 				} else {
 					roomInfo = await createChannelMethod(creatorId, roomData.name, members, false, {}, {});
 				}

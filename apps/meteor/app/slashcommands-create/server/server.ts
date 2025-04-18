@@ -54,7 +54,7 @@ slashCommands.add({
 			if (!user) {
 				return;
 			}
-			await createPrivateGroupMethod(user, channelStr, []);
+			await createPrivateGroupMethod(user, channelStr, undefined, []);
 			return;
 		}
 

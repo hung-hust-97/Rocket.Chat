@@ -106,7 +106,6 @@ async function createUsersSubscriptions({
 export const createRoom = async <T extends RoomType>(
 	type: T,
 	name: T extends 'd' ? undefined : string,
-	fname: T extends 'd' ? undefined : string,
 	owner: T extends 'd' ? IUser | undefined : IUser,
 	members: T extends 'd' ? IUser[] : string[] = [],
 	excludeSelf?: boolean,
@@ -114,6 +113,7 @@ export const createRoom = async <T extends RoomType>(
 	roomExtraData?: Partial<IRoom>,
 	options?: ICreateRoomParams['options'],
 	sidepanel?: ICreateRoomParams['sidepanel'],
+	fname?: T extends 'd' ? undefined : string,
 ): Promise<
 	ICreatedRoom & {
 		rid: string;

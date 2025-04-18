@@ -62,7 +62,7 @@ export class AppRoomBridge extends RoomBridge {
 		if (!user) {
 			throw new Error('Invalid user');
 		}
-		return (await createPrivateGroupMethod(user, room.name || '', members, room.ro, room.customFields, this.prepareExtraData(room))).rid;
+		return (await createPrivateGroupMethod(user, room.name || '', undefined, members, room.ro, room.customFields, this.prepareExtraData(room))).rid;
 	}
 
 	protected async getById(roomId: string, appId: string): Promise<IRoom> {
