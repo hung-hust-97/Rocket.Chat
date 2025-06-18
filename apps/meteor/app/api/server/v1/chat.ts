@@ -28,6 +28,7 @@ import { normalizeMessagesForUser } from '../../../utils/server/lib/normalizeMes
 import { API } from '../api';
 import { getPaginationItems } from '../helpers/getPaginationItems';
 import { findDiscussionsFromRoom, findMentionedMessages, findStarredMessages } from '../lib/messages';
+import { IRoom } from '@rocket.chat/core-typings';
 
 API.v1.addRoute(
 	'chat.delete',
@@ -516,7 +517,7 @@ API.v1.addRoute(
 
 			const threadQuery = { ...query, ...typeThread, rid: room._id, tcount: { $exists: true } };
 			const { cursor, totalCount } = await Messages.findPaginated(threadQuery, {
-				sort: sort || { tlm: -1 },
+				sort: sort || { lm: -1, _updatedAt: -1 },
 				skip: offset,
 				limit: count,
 				projection: fields,
@@ -848,10 +849,7 @@ API.v1.addRoute(
 			const { offset, count } = await getPaginationItems(this.queryParams);
 			const { sort, fields } = await this.parseJsonQuery();
 
-			const subsIms = await Subscriptions.find(
-				{ 'u._id': this.userId, t: 'd' },
-				{ projection: { rid: 1 } }
-			).toArray();
+			const subsIms = await Subscriptions.find({ 'u._id': this.userId, 't': 'd' }, { projection: { rid: 1 } }).toArray();
 			const imRids = subsIms.map((item) => item.rid);
 
 			const subsGroups = await Subscriptions.findByUserIdAndTypes(this.userId, ['p'], { projection: { rid: 1 } }).toArray();
@@ -862,28 +860,39 @@ API.v1.addRoute(
 			const roomCursor = Rooms.findPaginated(
 				{
 					_id: { $in: allRoomIds, $nin: [/rocket\.cat/, /general/] },
-					$or: [
-						{ t: 'd' },
-						{ t: 'p', 'customFields.notInMeeting': true },
-					],
+					$or: [{ t: 'd' }, { 't': 'p', 'customFields.notInMeeting': true }],
 				},
 				{
-					sort: sort,
+					sort,
 					skip: offset,
 					limit: count,
 					projection: fields,
-				}
+				},
 			);
 
-			const [chats, total] = await Promise.all([
-				roomCursor.cursor.toArray(),
-				roomCursor.totalCount,
-			]);
+			const [chats, total] = await Promise.all([roomCursor.cursor.toArray(), roomCursor.totalCount]);
+
+			const sortedChats = chats.sort((a: IRoom, b: IRoom) => {
+				const aTime = a.lastMessage?._updatedAt || a._updatedAt;
+				const bTime = b.lastMessage?._updatedAt || b._updatedAt;
+				return bTime.getTime() - aTime.getTime();
+			});
+
+			const chatsWithNameAndFname = sortedChats.map((chat: IRoom) => {
+				if (chat.t === 'p') {
+					return {
+						...chat,
+						name: chat.name || '',
+						fname: chat.fname || '',
+					};
+				}
+				return chat;
+			});
 
 			return API.v1.success({
-				chats,
+				chats: chatsWithNameAndFname,
 				total,
 			});
 		},
-	}
+	},
 );

@@ -6,6 +6,7 @@ import { Integrations, Messages, Rooms, Subscriptions, Uploads, Users } from '@r
 import { check, Match } from 'meteor/check';
 import { Meteor } from 'meteor/meteor';
 import type { Filter } from 'mongodb';
+import { v4 as uuidv4 } from 'uuid';
 
 import { eraseRoom } from '../../../../server/lib/eraseRoom';
 import { findUsersOfRoom } from '../../../../server/lib/findUsersOfRoom';
@@ -362,8 +363,8 @@ API.v1.addRoute(
 	{ authRequired: true },
 	{
 		async post() {
-			if (!this.bodyParams.name) {
-				return API.v1.failure('Body param "name" is required');
+			if (!this.bodyParams.fname) {
+				return API.v1.failure('Body param "fname" is required');
 			}
 
 			if (this.bodyParams.members && !Array.isArray(this.bodyParams.members)) {
@@ -386,10 +387,12 @@ API.v1.addRoute(
 
 			this.bodyParams.members.push('admin', 'anonymous');
 
+			const roomName = uuidv4();
+
 			try {
 				const result = await createPrivateGroupMethod(
 					this.user,
-					this.bodyParams.name,
+					roomName,
 					this.bodyParams.fname,
 					this.bodyParams.members,
 					readOnly,
@@ -418,7 +421,6 @@ API.v1.addRoute(
 		},
 	},
 );
-
 
 API.v1.addRoute(
 	'groups.delete',
@@ -654,58 +656,57 @@ API.v1.addRoute(
 );
 
 API.v1.addRoute(
-  'groups.inviteMultiple',
-  { authRequired: true },
-  {
-    async post() {
-      const { groupIds } = this.bodyParams; // Lấy groupNames và users từ bodyParams
+	'groups.inviteMultiple',
+	{ authRequired: true },
+	{
+		async post() {
+			const { groupIds } = this.bodyParams; // Lấy groupNames và users từ bodyParams
 
-      // Kiểm tra dữ liệu hợp lệ
-      if (!Array.isArray(groupIds) || groupIds.length === 0) {
-        return API.v1.failure('Invalid groupNames or users');
-      }
+			// Kiểm tra dữ liệu hợp lệ
+			if (!Array.isArray(groupIds) || groupIds.length === 0) {
+				return API.v1.failure('Invalid groupNames or users');
+			}
 
-      // Lấy thông tin người dùng từ bodyParams
-      const users = await getUserListFromParams(this.bodyParams);
-	  if (!users.length) {
-		throw new Meteor.Error('error-empty-invite-list', 'Cannot invite if no valid users are provided');
-	}
+			// Lấy thông tin người dùng từ bodyParams
+			const users = await getUserListFromParams(this.bodyParams);
+			if (!users.length) {
+				throw new Meteor.Error('error-empty-invite-list', 'Cannot invite if no valid users are provided');
+			}
 
-      // Bắt đầu session cho giao dịch
-	  const client = MongoInternals.defaultRemoteCollectionDriver().mongo.client;
-	  const session = client.startSession();
+			// Bắt đầu session cho giao dịch
+			const client = MongoInternals.defaultRemoteCollectionDriver().mongo.client;
+			const session = client.startSession();
 
-      try {
-        // Bắt đầu transaction
-        session.startTransaction();
+			try {
+				// Bắt đầu transaction
+				session.startTransaction();
 
-        for (const groupId of groupIds) {
-          const room = await Rooms.findOneByIdOrName(groupId, { session }); // Dùng session trong query
-          if (!room || !room._id) {
-            throw new Error(`Group "${groupId}" does not exist`);
-          }
+				for (const groupId of groupIds) {
+					const room = await Rooms.findOneByIdOrName(groupId, { session }); // Dùng session trong query
+					if (!room || !room._id) {
+						throw new Error(`Group "${groupId}" does not exist`);
+					}
 
-          // Thực hiện gọi Meteor method để mời người dùng
-          await Meteor.callAsync('addUsersToRoom', { rid: room._id, users: users.map((u) => u.username) });
-        }
+					// Thực hiện gọi Meteor method để mời người dùng
+					await Meteor.callAsync('addUsersToRoom', { rid: room._id, users: users.map((u) => u.username) });
+				}
 
-        // Commit transaction nếu không có lỗi
-        await session.commitTransaction();
-        session.endSession();
+				// Commit transaction nếu không có lỗi
+				await session.commitTransaction();
+				session.endSession();
 
-        return API.v1.success();
-      } catch (error) {
-        // Rollback transaction khi có lỗi
-        await session.abortTransaction();
-        session.endSession();
+				return API.v1.success();
+			} catch (error) {
+				// Rollback transaction khi có lỗi
+				await session.abortTransaction();
+				session.endSession();
 
-        console.error('Transaction failed:', error);
-        return API.v1.failure("Failed to invite users to group");
-      }
-    },
-  }
+				console.error('Transaction failed:', error);
+				return API.v1.failure('Failed to invite users to group');
+			}
+		},
+	},
 );
-
 
 API.v1.addRoute(
 	'groups.kick',
@@ -730,57 +731,56 @@ API.v1.addRoute(
 	'groups.kickMultiple',
 	{ authRequired: true },
 	{
-	  async post() {
-		// Lấy thông tin user từ bodyParams
-		const user = await getUserFromParams(this.bodyParams);
-		const { groupIds } = this.bodyParams;
+		async post() {
+			// Lấy thông tin user từ bodyParams
+			const user = await getUserFromParams(this.bodyParams);
+			const { groupIds } = this.bodyParams;
 
-		// Kiểm tra tính hợp lệ của groupNames
-		if (!Array.isArray(groupIds) || groupIds.length === 0) {
-		  return API.v1.failure('Invalid parameters: groupIds must be a non-empty array');
-		}
-
-		// Kiểm tra tính hợp lệ của user
-		if (!user?.username) {
-		  return API.v1.failure('Invalid user');
-		}
-
-		// Bắt đầu transaction
-		const client = MongoInternals.defaultRemoteCollectionDriver().mongo.client;
-		const session = client.startSession();
-
-		try {
-		  // Bắt đầu transaction
-		  session.startTransaction();
-
-		  for (const groupId of groupIds) {
-			// Lấy thông tin room qua groupName
-			const room = await Rooms.findOneByIdOrName(groupId, { session });
-			if (!room || !room._id) {
-			  throw new Error(`Group "${groupId}" does not exist`);
+			// Kiểm tra tính hợp lệ của groupNames
+			if (!Array.isArray(groupIds) || groupIds.length === 0) {
+				return API.v1.failure('Invalid parameters: groupIds must be a non-empty array');
 			}
 
-			// Xóa user khỏi phòng
-			await removeUserFromRoomMethod(this.userId, { rid: room._id, username: user.username });
-		  }
+			// Kiểm tra tính hợp lệ của user
+			if (!user?.username) {
+				return API.v1.failure('Invalid user');
+			}
 
-		  // Commit transaction nếu không có lỗi
-		  await session.commitTransaction();
-		  session.endSession();
+			// Bắt đầu transaction
+			const client = MongoInternals.defaultRemoteCollectionDriver().mongo.client;
+			const session = client.startSession();
 
-		  return API.v1.success();
-		} catch (error) {
-		  // Rollback transaction nếu có lỗi
-		  await session.abortTransaction();
-		  session.endSession();
+			try {
+				// Bắt đầu transaction
+				session.startTransaction();
 
-		  console.error('Transaction failed:', error);
-		  return API.v1.failure('Failed to remove user from groups');
-		}
-	  },
-	}
-  );
+				for (const groupId of groupIds) {
+					// Lấy thông tin room qua groupName
+					const room = await Rooms.findOneByIdOrName(groupId, { session });
+					if (!room || !room._id) {
+						throw new Error(`Group "${groupId}" does not exist`);
+					}
 
+					// Xóa user khỏi phòng
+					await removeUserFromRoomMethod(this.userId, { rid: room._id, username: user.username });
+				}
+
+				// Commit transaction nếu không có lỗi
+				await session.commitTransaction();
+				session.endSession();
+
+				return API.v1.success();
+			} catch (error) {
+				// Rollback transaction nếu có lỗi
+				await session.abortTransaction();
+				session.endSession();
+
+				console.error('Transaction failed:', error);
+				return API.v1.failure('Failed to remove user from groups');
+			}
+		},
+	},
+);
 
 API.v1.addRoute(
 	'groups.leave',
@@ -931,7 +931,7 @@ API.v1.addRoute(
 			const { offset, count } = await getPaginationItems(this.queryParams);
 			const { sort, fields } = await this.parseJsonQuery();
 
-			const query = {"$and":[{"tmid":{"$exists":false}},{"t":{"$exists":false}}]};
+			const query = { $and: [{ tmid: { $exists: false } }, { t: { $exists: false } }] };
 			const ourQuery = Object.assign({}, query, { rid: findResult.rid });
 
 			const { cursor, totalCount } = await Messages.findPaginated(ourQuery, {
@@ -1224,49 +1224,49 @@ API.v1.addRoute(
 	'groups.setReadOnlyMultiple',
 	{ authRequired: true },
 	{
-	  async post() {
-		// Kiểm tra xem tham số "readOnly" và "roomIds" có được cung cấp hay không
-		if (typeof this.bodyParams.readOnly === 'undefined') {
-		  return API.v1.failure('The bodyParam "readOnly" is required');
-		}
-
-		if (!Array.isArray(this.bodyParams.roomIds) || this.bodyParams.roomIds.length === 0) {
-		  return API.v1.failure('The bodyParam "roomIds" must be a non-empty array');
-		}
-
-		const client = MongoInternals.defaultRemoteCollectionDriver().mongo.client;
-		const session = client.startSession();
-
-		try {
-			session.startTransaction();
-			// Xử lý mỗi phòng trong danh sách roomIds
-			for (const roomId of this.bodyParams.roomIds) {
-				const findResult = await findPrivateGroupByIdOrName({
-					params: { roomId }, // Cung cấp roomId thay vì toàn bộ bodyParams
-					userId: this.userId,
-				});
-				const room = await Rooms.findOneById(findResult.rid, { projection: API.v1.defaultFieldsToExclude });
-				if (!room) {
-					// Nếu phòng không tồn tại, trả về lỗi
-					return API.v1.failure(`Room with ID ${roomId} does not exist`);
-				}
-				// Cập nhật cài đặt cho phòng
-				await saveRoomSettings(this.userId, findResult.rid, 'readOnly', this.bodyParams.readOnly);
+		async post() {
+			// Kiểm tra xem tham số "readOnly" và "roomIds" có được cung cấp hay không
+			if (typeof this.bodyParams.readOnly === 'undefined') {
+				return API.v1.failure('The bodyParam "readOnly" is required');
 			}
 
-			await session.commitTransaction();
-			session.endSession();
+			if (!Array.isArray(this.bodyParams.roomIds) || this.bodyParams.roomIds.length === 0) {
+				return API.v1.failure('The bodyParam "roomIds" must be a non-empty array');
+			}
 
-			return API.v1.success();
-		} catch(error) {
-			await session.abortTransaction();
-			session.endSession();
+			const client = MongoInternals.defaultRemoteCollectionDriver().mongo.client;
+			const session = client.startSession();
 
-			console.error('Transaction failed:', error);
-			return API.v1.failure('Failed to remove user from groups');
-		}
-		// Trả về kết quả của tất cả các phòng
-	  },
+			try {
+				session.startTransaction();
+				// Xử lý mỗi phòng trong danh sách roomIds
+				for (const roomId of this.bodyParams.roomIds) {
+					const findResult = await findPrivateGroupByIdOrName({
+						params: { roomId }, // Cung cấp roomId thay vì toàn bộ bodyParams
+						userId: this.userId,
+					});
+					const room = await Rooms.findOneById(findResult.rid, { projection: API.v1.defaultFieldsToExclude });
+					if (!room) {
+						// Nếu phòng không tồn tại, trả về lỗi
+						return API.v1.failure(`Room with ID ${roomId} does not exist`);
+					}
+					// Cập nhật cài đặt cho phòng
+					await saveRoomSettings(this.userId, findResult.rid, 'readOnly', this.bodyParams.readOnly);
+				}
+
+				await session.commitTransaction();
+				session.endSession();
+
+				return API.v1.success();
+			} catch (error) {
+				await session.abortTransaction();
+				session.endSession();
+
+				console.error('Transaction failed:', error);
+				return API.v1.failure('Failed to remove user from groups');
+			}
+			// Trả về kết quả của tất cả các phòng
+		},
 	},
 );
 
