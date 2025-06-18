@@ -517,7 +517,7 @@ API.v1.addRoute(
 
 			const threadQuery = { ...query, ...typeThread, rid: room._id, tcount: { $exists: true } };
 			const { cursor, totalCount } = await Messages.findPaginated(threadQuery, {
-				sort: sort || { lm: -1, _updatedAt: -1 },
+				sort: sort || { tlm: -1 },
 				skip: offset,
 				limit: count,
 				projection: fields,
