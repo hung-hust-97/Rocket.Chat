@@ -1117,6 +1117,40 @@ API.v1.addRoute(
 );
 
 API.v1.addRoute(
+	'groups.refname',
+	{ authRequired: true },
+	{
+		async post() {
+			if (!this.bodyParams.fname?.trim()) {
+				return API.v1.failure('The bodyParam "fname" is required');
+			}
+
+			if(!this.bodyParams.roomId?.trim()) {
+				return API.v1.failure('The bodyParam "roomId" is required');
+			}
+
+			const user = await Users.findOneById(this.userId, { projections: { username: 1 } });
+			const room = await Rooms.findOneById(this.bodyParams.roomId, { projection: API.v1.defaultFieldsToExclude });
+			if (!room) {
+				throw new Meteor.Error('error-room-not-found', 'The required "roomId" or "roomName" param provided does not match any group');
+			}
+
+			if(!await canAccessRoomAsync(room, user)) 
+			{
+				throw new Meteor.Error('error-not-allowed', 'Not allowed');
+			}
+
+			room.fname = this.bodyParams.fname;
+			await Rooms.updateOne({ _id: room._id }, { $set: room });
+
+			return API.v1.success({
+				group: await composeRoomWithLastMessage(room, this.userId),
+			});
+		},
+	},
+);
+
+API.v1.addRoute(
 	'groups.setCustomFields',
 	{ authRequired: true },
 	{

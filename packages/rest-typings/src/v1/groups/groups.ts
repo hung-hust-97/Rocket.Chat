@@ -38,6 +38,7 @@ import type { GroupsSetReadOnlyMultipleProps, GroupsSetReadOnlyProps } from './G
 import type { GroupsSetTopicProps } from './GroupsSetTopicProps';
 import type { GroupsSetTypeProps } from './GroupsSetTypeProps';
 import type { GroupsUnarchiveProps } from './GroupsUnarchiveProps';
+import { GroupsRefnameProps } from './GroupRefnameProps';
 
 export type GroupsEndpoints = {
 	'/v1/groups.files': {
@@ -176,6 +177,11 @@ export type GroupsEndpoints = {
 	};
 	'/v1/groups.rename': {
 		POST: (params: GroupsRenameProps) => {
+			group: IRoom;
+		};
+	};
+	'/v1/groups.refname': {
+		POST: (params: GroupsRefnameProps) => {
 			group: IRoom;
 		};
 	};
