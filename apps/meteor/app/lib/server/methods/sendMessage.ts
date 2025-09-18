@@ -82,25 +82,7 @@ export async function executeSendMessage(uid: IUser['_id'], message: AtLeast<IMe
 	check(rid, String);
 
 	if (message.replyId) {
-		const replyMessage = await Messages.findOneById(message.replyId, {
-			projection: { msg: 1, u: 1 },
-		});
-
-		if (!replyMessage) {
-			throw new Meteor.Error('error-invalid-reply', 'The reply message does not exist', {
-				method: 'sendMessage',
-			});
-		}
-
-		message.reply = {
-			_id: replyMessage._id,
-			msg: replyMessage.file ? replyMessage.file.name : replyMessage.msg,
-			username: replyMessage.u?.username,
-			name: replyMessage.u?.name,
-			positon: replyMessage.position ? replyMessage.position : 'Không có chức danh',
-			mentions: replyMessage.mentions ? replyMessage.mentions : [],
-			attachments: replyMessage.attachments ? replyMessage.attachments : [],
-		};
+		message.reply = await buildReplyMessage(message.replyId);
 	}
 
 	try {
@@ -172,3 +154,26 @@ RateLimiter.limitMethod('sendMessage', 5, 1000, {
 		return !(await hasPermissionAsync(userId, 'send-many-messages'));
 	},
 });
+
+async function buildReplyMessage(replyId: string) {
+	const replyMessage = await Messages.findOneById(replyId, {
+		projection: { msg: 1, u: 1, position: 1, mentions: 1, attachments: 1, urls: 1 },
+	});
+
+	if (!replyMessage) {
+		throw new Meteor.Error('error-invalid-reply', 'The reply message does not exist', {
+			method: 'sendMessage',
+		});
+	}
+
+	return {
+		_id: replyMessage._id,
+		msg: replyMessage.file ? replyMessage.file.name : replyMessage.msg,
+		username: replyMessage.u?.username,
+		name: replyMessage.u?.name,
+		position: replyMessage.position ? replyMessage.position : 'Không có chức danh',
+		mentions: replyMessage.mentions ? replyMessage.mentions : [],
+		attachments: replyMessage.attachments ? replyMessage.attachments : [],
+		urls: replyMessage.urls ? replyMessage.urls : [],
+	};
+}
