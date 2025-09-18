@@ -97,7 +97,9 @@ export async function executeSendMessage(uid: IUser['_id'], message: AtLeast<IMe
 			msg: replyMessage.file ? replyMessage.file.name : replyMessage.msg,
 			username: replyMessage.u?.username,
 			name: replyMessage.u?.name,
-			positon: replyMessage.position ? replyMessage.position : "Không có chức danh"
+			positon: replyMessage.position ? replyMessage.position : 'Không có chức danh',
+			mentions: replyMessage.mentions ? replyMessage.mentions : [],
+			attachments: replyMessage.attachments ? replyMessage.attachments : [],
 		};
 	}
 
