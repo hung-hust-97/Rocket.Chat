@@ -389,6 +389,12 @@ API.v1.addRoute(
 
 			const roomName = uuidv4();
 
+			// Get user's tenant info to add to the group
+			const currentUser = await Users.findOneById(this.userId, {
+				projection: { active_tenant: 1 },
+			});
+			const tenantId = (currentUser as any)?.active_tenant;
+
 			try {
 				const result = await createPrivateGroupMethod(
 					this.user,
@@ -399,6 +405,7 @@ API.v1.addRoute(
 					{
 						...this.bodyParams.customFields,
 						notInMeeting: true,
+						tenantId: tenantId,
 					},
 					this.bodyParams.extraData,
 					this.bodyParams.excludeSelf ?? false,
