@@ -46,20 +46,21 @@ interface IChannelResult {
 	tenantId?: string;
 }
 
+// TODO: Temporarily disabled tenant filtering
 // Helper function to get user's tenant info
-async function getUserTenantInfo(userId: string) {
-	const currentUser = await Users.findOneById(userId, {
-		projection: { active_tenant: 1, all_tenants: 1 },
-	});
+// async function getUserTenantInfo(userId: string) {
+// 	const currentUser = await Users.findOneById(userId, {
+// 		projection: { active_tenant: 1, all_tenants: 1 },
+// 	});
 
-	return {
-		activeTenant: (currentUser as any)?.active_tenant,
-		allTenants: (currentUser as any)?.all_tenants,
-	};
-}
+// 	return {
+// 		activeTenant: (currentUser as any)?.active_tenant,
+// 		allTenants: (currentUser as any)?.all_tenants,
+// 	};
+// }
 
 // Helper function to search users
-async function searchUsers(searchTerm: string, userId: string, paginationOffset: number, paginationCount: number) {
+async function searchUsers(searchTerm: string, _userId: string, paginationOffset: number, paginationCount: number) {
 	const userQuery: any = {
 		$or: [
 			{ username: { $regex: escapeRegExp(searchTerm.trim()), $options: 'i' } },
@@ -69,14 +70,13 @@ async function searchUsers(searchTerm: string, userId: string, paginationOffset:
 		type: { $ne: 'app' },
 	};
 
-	// Apply tenant filtering - only search users with same active tenant
-	const { activeTenant } = await getUserTenantInfo(userId);
-	if (activeTenant) {
-		userQuery.active_tenant = activeTenant;
-	} else {
-		// If current user has no tenant, return empty results
-		return [];
-	}
+	// TODO: Temporarily removed tenant filtering
+	// const { activeTenant } = await getUserTenantInfo(userId);
+	// if (activeTenant) {
+	// 	userQuery.active_tenant = activeTenant;
+	// } else {
+	// 	return [];
+	// }
 
 	const users = await Users.find(userQuery, {
 		projection: {
@@ -107,12 +107,11 @@ async function searchUsers(searchTerm: string, userId: string, paginationOffset:
 async function searchGroups(searchTerm: string, userId: string, paginationOffset: number, paginationCount: number) {
 	const groupSearchTerm = escapeRegExp(searchTerm.trim());
 
-	// Get user's tenant info
-	const { activeTenant } = await getUserTenantInfo(userId);
-	if (!activeTenant) {
-		// If current user has no tenant, return empty results
-		return [];
-	}
+	// TODO: Temporarily removed tenant filtering
+	// const { activeTenant } = await getUserTenantInfo(userId);
+	// if (!activeTenant) {
+	// 	return [];
+	// }
 
 	// Get user's subscribed private groups
 	const userSubscriptions = await Subscriptions.findByUserIdAndTypes(userId, ['p'], {
@@ -129,7 +128,7 @@ async function searchGroups(searchTerm: string, userId: string, paginationOffset
 		_id: { $in: userGroupIds },
 		$or: [{ name: { $regex: groupSearchTerm, $options: 'i' } }, { fname: { $regex: groupSearchTerm, $options: 'i' } }],
 		t: 'p' as RoomType,
-		tenantId: activeTenant,
+		// tenantId: activeTenant, // TODO: Temporarily removed tenant filtering
 	};
 
 	const groups = await Rooms.find(groupQuery, {
@@ -167,12 +166,11 @@ async function searchGroups(searchTerm: string, userId: string, paginationOffset
 async function searchChannels(searchTerm: string, userId: string, paginationOffset: number, paginationCount: number) {
 	const channelSearchTerm = escapeRegExp(searchTerm.trim());
 
-	// Get user's tenant info
-	const { activeTenant } = await getUserTenantInfo(userId);
-	if (!activeTenant) {
-		// If current user has no tenant, return empty results
-		return [];
-	}
+	// TODO: Temporarily removed tenant filtering
+	// const { activeTenant } = await getUserTenantInfo(userId);
+	// if (!activeTenant) {
+	// 	return [];
+	// }
 
 	// Check if user can view all public channels
 	const canViewAllChannels = await hasPermissionAsync(userId, 'view-c-room');
@@ -180,7 +178,7 @@ async function searchChannels(searchTerm: string, userId: string, paginationOffs
 	const channelQuery: any = {
 		t: 'c' as RoomType,
 		$or: [{ name: { $regex: channelSearchTerm, $options: 'i' } }, { fname: { $regex: channelSearchTerm, $options: 'i' } }],
-		tenantId: activeTenant,
+		// tenantId: activeTenant, // TODO: Temporarily removed tenant filtering
 	};
 
 	// If user can't view all channels, only show subscribed ones
@@ -362,17 +360,16 @@ API.v1.addRoute(
 
 			const { offset: paginationOffset, count: paginationCount } = await getPaginationItems((this as any).queryParams);
 
-			// Get user's tenant info
-			const { activeTenant } = await getUserTenantInfo((this as any).userId);
-			if (!activeTenant) {
-				// If current user has no tenant, return empty results
-				return API.v1.success({
-					rooms: [],
-					total: 0,
-					offset: paginationOffset,
-					count: 0,
-				});
-			}
+			// TODO: Temporarily removed tenant filtering
+			// const { activeTenant } = await getUserTenantInfo((this as any).userId);
+			// if (!activeTenant) {
+			// 	return API.v1.success({
+			// 		rooms: [],
+			// 		total: 0,
+			// 		offset: paginationOffset,
+			// 		count: 0,
+			// 	});
+			// }
 
 			// Get user's subscribed rooms (both groups and channels)
 			const userSubscriptions = await Subscriptions.findByUserIdAndTypes((this as any).userId, ['p', 'c'], {
@@ -395,7 +392,7 @@ API.v1.addRoute(
 				_id: { $in: userRoomIds },
 				$or: [{ name: { $regex: roomSearchTerm, $options: 'i' } }, { fname: { $regex: roomSearchTerm, $options: 'i' } }],
 				t: { $in: ['p', 'c'] as RoomType[] }, // Both private groups and public channels
-				tenantId: activeTenant,
+				// tenantId: activeTenant, // TODO: Temporarily removed tenant filtering
 			};
 
 			const rooms = await Rooms.find(roomQuery, {
