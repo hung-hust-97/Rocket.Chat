@@ -273,12 +273,15 @@ API.v1.addRoute(
 		async get() {
 			const { searchTerm } = (this as any).queryParams;
 
-			if (!searchTerm || searchTerm.trim().length === 0) {
-				return API.v1.failure('Search term is required');
-			}
-
 			const { offset: paginationOffset, count: paginationCount } = await getPaginationItems((this as any).queryParams);
-			const users = await searchUsers(searchTerm, (this as any).userId, paginationOffset, paginationCount);
+
+			let users;
+
+			if (searchTerm && searchTerm.trim().length > 0) {
+				users = await searchUsers(searchTerm, (this as any).userId, paginationOffset, paginationCount);
+			} else {
+				users = await searchUsers('', (this as any).userId, paginationOffset, paginationCount);
+			}
 
 			return API.v1.success({
 				users,
