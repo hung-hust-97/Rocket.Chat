@@ -281,6 +281,50 @@ API.v1.addRoute(
 );
 
 API.v1.addRoute(
+	'users.deleteFromTenant',
+	{ authRequired: true },
+	{
+		async post() {
+			const { tenantId, userId } = this.bodyParams;
+
+			if (!tenantId || !userId) {
+				throw new Meteor.Error('error-invalid-params', 'Missing tenantId or userId');
+			}
+
+			const user = await Users.findOne({ _id: userId });
+
+			if (!user) {
+				throw new Meteor.Error('error-user-not-found', 'User not found');
+			}
+
+			const tenantExists = user.services?.keycloak?.all_tenant?.some(
+				(t) => t.tenant_id === tenantId
+			);
+
+			if (!tenantExists) {
+				throw new Meteor.Error('error-tenant-not-found', 'Tenant ID not found in user');
+			}
+
+			await Users.updateOne(
+				{ _id: userId },
+				{
+					$pull: { 'services.keycloak.all_tenant': { tenant_id: tenantId } },
+				}
+			);
+
+			if (user.services?.keycloak?.active_tenant?.tenant_id === tenantId) {
+				await Users.updateOne(
+					{ _id: userId },
+					{ $unset: { 'services.keycloak.active_tenant': '' } }
+				);
+			}
+
+			return API.v1.success({ message: 'Tenant removed successfully' });
+		},
+	}
+);
+
+API.v1.addRoute(
 	'users.create',
 	{ authRequired: true, validateParams: isUserCreateParamsPOST },
 	{
@@ -548,10 +592,29 @@ API.v1.addRoute(
 				])
 				.toArray();
 
-			const {
+			let {
 				sortedResults: users,
 				totalCount: [{ total } = { total: 0 }],
 			} = result[0];
+
+			const currentUser = await Users.findOneById(this.userId);
+			const activeTenant = currentUser?.services?.keycloak?.active_tenant?.tenant_id;
+
+			if (activeTenant) {
+				users = await Promise.all(
+					users.map(async (user) => {
+						if (user._id === currentUser._id) return null;
+
+						const otherUser = await Users.findOneById(user._id);
+						const otherUserTenants = otherUser?.services?.keycloak?.all_tenant;
+
+						return Array.isArray(otherUserTenants) &&
+							otherUserTenants.some(tenant => tenant.tenant_id === activeTenant)
+								? user
+								: null;
+					}));
+				users = users.filter(Boolean);
+			}
 
 			return API.v1.success({
 				users,

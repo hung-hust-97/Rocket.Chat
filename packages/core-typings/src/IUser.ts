@@ -68,6 +68,7 @@ export interface IUserServices {
 	linkedin?: any;
 	twitter?: any;
 	gitlab?: any;
+	keycloak?: any;
 	totp?: {
 		enabled: boolean;
 		hashedBackup: string[];
