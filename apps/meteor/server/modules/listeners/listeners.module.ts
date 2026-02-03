@@ -199,6 +199,10 @@ export class ListenersModule {
 			notifications.notifyRoomInThisInstance(rid, 'messagesRead', { tmid, until });
 		});
 
+		service.onEvent('notify.unreadChanged', ({ uid, rid, unread }): void => {
+			notifications.notifyUserInThisInstance(uid, 'unread-changed', { rid, unread });
+		});
+
 		service.onEvent('watch.subscriptions', ({ clientAction, subscription }) => {
 			if (!subscription.u?._id) {
 				return;

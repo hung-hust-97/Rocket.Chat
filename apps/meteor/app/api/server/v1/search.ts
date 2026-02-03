@@ -7,12 +7,6 @@ import { API } from '../api';
 import { composeRoomWithLastMessage } from '../helpers/composeRoomWithLastMessage';
 import { getPaginationItems } from '../helpers/getPaginationItems';
 
-interface ISearchResults {
-	users: IUserResult[];
-	groups: IGroupResult[];
-	channels: IChannelResult[];
-}
-
 interface IUserResult {
 	_id: string;
 	username?: string;
@@ -32,18 +26,7 @@ interface IGroupResult {
 	_updatedAt?: Date;
 	usersCount?: number;
 	tenantId?: string;
-}
-
-interface IChannelResult {
-	_id: string;
-	name?: string;
-	fname?: string;
-	t?: RoomType;
-	u?: any;
-	lastMessage?: any;
-	_updatedAt?: Date;
-	usersCount?: number;
-	tenantId?: string;
+	type: 'group';
 }
 
 // TODO: Temporarily disabled tenant filtering
@@ -59,16 +42,42 @@ interface IChannelResult {
 // 	};
 // }
 
-// Helper function to search users
-async function searchUsers(searchTerm: string, _userId: string, paginationOffset: number, paginationCount: number) {
-	const userQuery: any = {
+// Helper function to build the users search query
+function buildUserSearchQuery(searchTerm: string) {
+	const trimmed = searchTerm.trim();
+
+	return {
 		$or: [
-			{ username: { $regex: escapeRegExp(searchTerm.trim()), $options: 'i' } },
-			{ name: { $regex: escapeRegExp(searchTerm.trim()), $options: 'i' } },
+			{ username: { $regex: escapeRegExp(trimmed), $options: 'i' } },
+			{ name: { $regex: escapeRegExp(trimmed), $options: 'i' } },
 		],
 		active: true,
 		type: { $ne: 'app' },
 	};
+}
+
+// Helper to build unified paginated response
+function buildPagedResponse<T>(data: T, offset: number, limit: number, totalItems: number) {
+	const safeLimit = limit || 1;
+	const page = Math.floor(offset / safeLimit) + 1;
+	const totalPage = Math.max(1, Math.ceil(totalItems / safeLimit));
+
+	return {
+		code: 200,
+		message: 'SUCCESS',
+		data: {
+			page,
+			limit,
+			totalItems,
+			totalPage,
+			data,
+		},
+	};
+}
+
+// Helper function to search users
+async function searchUsers(searchTerm: string, _userId: string, paginationOffset: number, paginationCount: number) {
+	const userQuery: any = buildUserSearchQuery(searchTerm);
 
 	// TODO: Temporarily removed tenant filtering
 	// const { activeTenant } = await getUserTenantInfo(userId);
@@ -89,6 +98,41 @@ async function searchUsers(searchTerm: string, _userId: string, paginationOffset
 		sort: { username: 1 },
 		limit: paginationCount,
 		skip: paginationOffset,
+	}).toArray();
+
+	return users.map(
+		(user): IUserResult => ({
+			_id: user._id,
+			username: user.username,
+			name: user.name,
+			status: user.status,
+			active: user.active,
+			type: 'user',
+		}),
+	);
+}
+
+// Helper function to search users without pagination (for merging with groups)
+async function searchUsersAll(searchTerm: string, _userId: string) {
+	const trimmedTerm = searchTerm?.trim() || '';
+	const userQuery: any = {
+		active: true,
+		type: { $ne: 'app' },
+	};
+
+	if (trimmedTerm.length > 0) {
+		userQuery.name = { $regex: escapeRegExp(trimmedTerm), $options: 'i' };
+	}
+
+	const users = await Users.find(userQuery, {
+		projection: {
+			_id: 1,
+			username: 1,
+			name: 1,
+			status: 1,
+			active: 1,
+		},
+		sort: { name: 1 },
 	}).toArray();
 
 	return users.map(
@@ -146,6 +190,63 @@ async function searchGroups(searchTerm: string, userId: string, paginationOffset
 		sort: { name: 1 },
 		limit: paginationCount,
 		skip: paginationOffset,
+	}).toArray();
+
+	// Compose rooms with last message
+	const composedGroups = await Promise.all(
+		groups.map(async (group) => {
+			const composedRoom = await composeRoomWithLastMessage(group, userId);
+			return {
+				...composedRoom,
+				type: 'group' as const,
+			};
+		}),
+	);
+
+	return composedGroups;
+}
+
+// Helper function to search groups without pagination (for merging with users)
+// Only returns groups with customFields.notInMeeting = true
+async function searchGroupsAll(searchTerm: string, userId: string) {
+	const trimmedTerm = searchTerm?.trim() || '';
+
+	// Get user's subscribed private groups
+	const userSubscriptions = await Subscriptions.findByUserIdAndTypes(userId, ['p'], {
+		projection: { rid: 1 },
+	}).toArray();
+
+	const userGroupIds = userSubscriptions.map((sub) => sub.rid);
+
+	if (userGroupIds.length === 0) {
+		return [];
+	}
+
+	const groupQuery: any = {
+		_id: { $in: userGroupIds },
+		t: 'p' as RoomType,
+		'customFields.notInMeeting': true,
+		// tenantId: activeTenant, // TODO: Temporarily removed tenant filtering
+	};
+
+	if (trimmedTerm.length > 0) {
+		const groupSearchTerm = escapeRegExp(trimmedTerm);
+		groupQuery.$or = [{ name: { $regex: groupSearchTerm, $options: 'i' } }, { fname: { $regex: groupSearchTerm, $options: 'i' } }];
+	}
+
+	const groups = await Rooms.find(groupQuery, {
+		projection: {
+			_id: 1,
+			name: 1,
+			fname: 1,
+			t: 1,
+			u: 1,
+			lastMessage: 1,
+			_updatedAt: 1,
+			usersCount: 1,
+			tenantId: 1,
+		},
+		sort: { fname: 1 },
 	}).toArray();
 
 	// Compose rooms with last message
@@ -232,32 +333,42 @@ API.v1.addRoute(
 	{
 		async get() {
 			const { searchTerm } = (this as any).queryParams;
-
-			if (!searchTerm || searchTerm.trim().length === 0) {
-				return API.v1.failure('Search term is required');
-			}
-
 			const { offset: paginationOffset, count: paginationCount } = await getPaginationItems((this as any).queryParams);
 
+			// Get all users and groups (without pagination first)
 			const [users, groups, channels] = await Promise.all([
-				searchUsers(searchTerm, (this as any).userId, paginationOffset, paginationCount),
-				searchGroups(searchTerm, (this as any).userId, paginationOffset, paginationCount),
-				searchChannels(searchTerm, (this as any).userId, paginationOffset, paginationCount),
+				searchUsersAll(searchTerm, (this as any).userId),
+				searchGroupsAll(searchTerm, (this as any).userId),
+				searchChannels(searchTerm || '', (this as any).userId, paginationOffset, paginationCount),
 			]);
 
-			const results: ISearchResults = {
-				users,
-				groups,
-				channels,
-			};
+			// Merge users and groups into a single array
+			const mergedResults: Array<IUserResult | IGroupResult> = [
+				...users,
+				...groups,
+			];
 
-			const totalResults = users.length + groups.length + channels.length;
+			// Sort by name (for users) and fname (for groups)
+			mergedResults.sort((a, b) => {
+				const aSortKey = a.type === 'user' ? (a as IUserResult).name || '' : (a as IGroupResult).fname || '';
+				const bSortKey = b.type === 'user' ? (b as IUserResult).name || '' : (b as IGroupResult).fname || '';
+				return aSortKey.localeCompare(bSortKey);
+			});
+
+			// Apply pagination to merged results
+			const totalResults = mergedResults.length;
+			const paginatedResults = mergedResults.slice(paginationOffset, paginationOffset + paginationCount);
 
 			return API.v1.success({
-				results,
-				total: totalResults,
-				offset: paginationOffset,
-				count: totalResults,
+				...buildPagedResponse(
+					{
+						items: paginatedResults,
+						channels,
+					},
+					paginationOffset,
+					paginationCount,
+					totalResults,
+				),
 			});
 		},
 	},
@@ -275,19 +386,14 @@ API.v1.addRoute(
 
 			const { offset: paginationOffset, count: paginationCount } = await getPaginationItems((this as any).queryParams);
 
-			let users;
+			const effectiveSearchTerm = searchTerm && searchTerm.trim().length > 0 ? searchTerm : '';
 
-			if (searchTerm && searchTerm.trim().length > 0) {
-				users = await searchUsers(searchTerm, (this as any).userId, paginationOffset, paginationCount);
-			} else {
-				users = await searchUsers('', (this as any).userId, paginationOffset, paginationCount);
-			}
+			const users = await searchUsers(effectiveSearchTerm, (this as any).userId, paginationOffset, paginationCount);
+
+			const total = await Users.col.countDocuments(buildUserSearchQuery(effectiveSearchTerm));
 
 			return API.v1.success({
-				users,
-				total: users.length,
-				offset: paginationOffset,
-				count: users.length,
+				...buildPagedResponse(users, paginationOffset, paginationCount, total),
 			});
 		},
 	},
@@ -311,10 +417,7 @@ API.v1.addRoute(
 			const groups = await searchGroups(searchTerm, (this as any).userId, paginationOffset, paginationCount);
 
 			return API.v1.success({
-				groups,
-				total: groups.length,
-				offset: paginationOffset,
-				count: groups.length,
+				...buildPagedResponse(groups, paginationOffset, paginationCount, groups.length),
 			});
 		},
 	},
@@ -338,10 +441,7 @@ API.v1.addRoute(
 			const channels = await searchChannels(searchTerm, (this as any).userId, paginationOffset, paginationCount);
 
 			return API.v1.success({
-				channels,
-				total: channels.length,
-				offset: paginationOffset,
-				count: channels.length,
+				...buildPagedResponse(channels, paginationOffset, paginationCount, channels.length),
 			});
 		},
 	},
@@ -383,10 +483,7 @@ API.v1.addRoute(
 
 			if (userRoomIds.length === 0) {
 				return API.v1.success({
-					rooms: [],
-					total: 0,
-					offset: paginationOffset,
-					count: 0,
+					...buildPagedResponse([], paginationOffset, paginationCount, 0),
 				});
 			}
 
@@ -427,10 +524,7 @@ API.v1.addRoute(
 			);
 
 			return API.v1.success({
-				rooms: composedRooms,
-				total: rooms.length,
-				offset: paginationOffset,
-				count: rooms.length,
+				...buildPagedResponse(composedRooms, paginationOffset, paginationCount, rooms.length),
 			});
 		},
 	},

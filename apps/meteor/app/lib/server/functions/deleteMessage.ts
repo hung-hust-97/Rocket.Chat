@@ -90,6 +90,7 @@ export async function deleteMessage(message: IMessage, user: IUser): Promise<voi
 		await Messages.setAsDeletedByIdAndUser(message._id, user as Required<Pick<IUser, '_id' | 'username' | 'name'>>);
 	} else {
 		void api.broadcast('notify.deleteMessage', message.rid, { _id: message._id });
+		void api.broadcast('watch.messages', { message: { ...message, t: 'rm', _updatedAt: new Date() } });
 	}
 
 	const room = await Rooms.findOneById(message.rid, { projection: { lastMessage: 1, prid: 1, mid: 1, federated: 1 } });
