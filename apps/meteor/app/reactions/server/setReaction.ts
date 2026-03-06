@@ -41,7 +41,7 @@ const removeUserReaction = (message: IMessage, reaction: string, username: strin
 	return message;
 };
 
-async function setReaction(room: IRoom, user: IUser, message: IMessage, reaction: string, shouldReact?: boolean) {
+async function setReaction(room: IRoom, user: IUser, message: IMessage, reaction: string, shouldReact?: boolean, alias?: string) {
 	reaction = `:${reaction.replace(/:/g, '')}:`;
 
 	if (!emoji.list[reaction] && (await EmojiCustom.findByNameOrAlias(reaction, {}).count()) === 0) {
@@ -114,7 +114,7 @@ async function setReaction(room: IRoom, user: IUser, message: IMessage, reaction
 				usernames: [],
 			};
 		}
-		message.reactions[reaction].usernames.push({ name: user.name, username: user.username });
+		message.reactions[reaction].usernames.push({ name: user.name, username: user.username, ...(alias && { alias }) });
 		await Messages.setReactions(message._id, message.reactions);
 		if (isTheLastMessage(room, message)) {
 			await Rooms.setReactionsInLastMessage(room._id, message.reactions);
@@ -133,7 +133,7 @@ async function setReaction(room: IRoom, user: IUser, message: IMessage, reaction
 	});
 }
 
-export async function executeSetReaction(userId: string, reaction: string, messageId: IMessage['_id'], shouldReact?: boolean) {
+export async function executeSetReaction(userId: string, reaction: string, messageId: IMessage['_id'], shouldReact?: boolean, alias?: string) {
 	const user = await Users.findOneById(userId);
 
 	if (!user) {
@@ -154,25 +154,25 @@ export async function executeSetReaction(userId: string, reaction: string, messa
 		throw new Meteor.Error('not-authorized', 'Not Authorized', { method: 'setReaction' });
 	}
 
-	return setReaction(room, user, message, reaction, shouldReact);
+	return setReaction(room, user, message, reaction, shouldReact, alias);
 }
 
 declare module '@rocket.chat/ddp-client' {
 	// eslint-disable-next-line @typescript-eslint/naming-convention
 	interface ServerMethods {
-		setReaction(reaction: string, messageId: IMessage['_id'], shouldReact?: boolean): boolean | undefined;
+		setReaction(reaction: string, messageId: IMessage['_id'], shouldReact?: boolean, alias?: string): boolean | undefined;
 	}
 }
 
 Meteor.methods<ServerMethods>({
-	async setReaction(reaction, messageId, shouldReact) {
+	async setReaction(reaction, messageId, shouldReact, alias) {
 		const uid = Meteor.userId();
 		if (!uid) {
 			throw new Meteor.Error('error-invalid-user', 'Invalid user', { method: 'setReaction' });
 		}
 
 		try {
-			await executeSetReaction(uid, reaction, messageId, shouldReact);
+			await executeSetReaction(uid, reaction, messageId, shouldReact, alias);
 		} catch (e: any) {
 			if (e.error === 'error-not-allowed' && e.reason && e.details && e.details.rid) {
 				void api.broadcast('notify.ephemeralMessage', uid, e.details.rid, {

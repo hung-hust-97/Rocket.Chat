@@ -143,6 +143,18 @@ export interface IMessage extends IRocketChatRecord {
 	u: Required<Pick<IUser, '_id' | 'username'>> & Pick<IUser, 'name'>;
 	blocks?: MessageSurfaceLayout;
 	alias?: string;
+	replyId?: string;
+	reply?: {
+		_id: string;
+		msg: string;
+		username: string;
+		name?: string;
+		alias?: string;
+		position?: string;
+		mentions: MessageMention[];
+		attachments: MessageAttachment[];
+		urls: MessageUrl[];
+	};
 	md?: Root;
 
 	_hidden?: boolean;
@@ -189,7 +201,11 @@ export interface IMessage extends IRocketChatRecord {
 	attachments?: MessageAttachment[];
 
 	reactions?: {
-		[key: string]: { names?: (string | undefined)[]; usernames: string[]; federationReactionEventIds?: Record<string, string> };
+		[key: string]: {
+			names?: (string | undefined)[];
+			usernames: (string | { username: string | undefined; name: string | undefined; alias?: string })[];
+			federationReactionEventIds?: Record<string, string>;
+		};
 	};
 
 	private?: boolean;

@@ -156,9 +156,7 @@ RateLimiter.limitMethod('sendMessage', 5, 1000, {
 });
 
 async function buildReplyMessage(replyId: string) {
-	const replyMessage = await Messages.findOneById(replyId, {
-		projection: { msg: 1, u: 1, position: 1, mentions: 1, attachments: 1, urls: 1 },
-	});
+	const replyMessage = await Messages.findOneById(replyId);
 
 	if (!replyMessage) {
 		throw new Meteor.Error('error-invalid-reply', 'The reply message does not exist', {
@@ -166,14 +164,19 @@ async function buildReplyMessage(replyId: string) {
 		});
 	}
 
-	return {
+	SystemLogger.info({ msg: 'buildReplyMessage', replyMessage });
+
+	const reply = {
 		_id: replyMessage._id,
 		msg: replyMessage.file ? replyMessage.file.name : replyMessage.msg,
 		username: replyMessage.u?.username,
 		name: replyMessage.u?.name,
-		position: replyMessage.position ? replyMessage.position : 'Không có chức danh',
-		mentions: replyMessage.mentions ? replyMessage.mentions : [],
-		attachments: replyMessage.attachments ? replyMessage.attachments : [],
-		urls: replyMessage.urls ? replyMessage.urls : [],
+		position: replyMessage.position || 'Không có chức danh',
+		mentions: replyMessage.mentions || [],
+		attachments: replyMessage.attachments || [],
+		urls: replyMessage.urls || [],
+		alias: replyMessage.alias || '',
 	};
+
+	return reply;
 }
