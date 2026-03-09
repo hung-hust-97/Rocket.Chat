@@ -1604,15 +1604,15 @@ export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
 		return this.updateMany(query, update);
 	}
 
-	relpaceName(previousUsername: string, newName: string) {
-		const query = { "usernames.username": previousUsername };
+	replaceName(previousUsername: string, newName: string) {
+		const query = { 'usernames.username': previousUsername };
 
 		const update = {
 			$set: {
-				"usernames.$.name": newName,
+				'usernames.$.name': newName,
 			},
 		};
-		return this.update(query, update, { multi: true });
+		return this.updateMany(query, update);
 	}
 
 	replaceMutedUsername(previousUsername: IUser['username'], username: IUser['username']): Promise<Document | UpdateResult> {
@@ -1633,6 +1633,18 @@ export class RoomsRaw extends BaseRaw<IRoom> implements IRoomsModel {
 		const update: UpdateFilter<IRoom> = {
 			$set: {
 				'u.username': username,
+			},
+		};
+
+		return this.updateMany(query, update);
+	}
+
+	replaceNameOfUserByUserId(userId: IUser['_id'], name: IUser['name']): Promise<Document | UpdateResult> {
+		const query: Filter<IRoom> = { 'u._id': userId };
+
+		const update: UpdateFilter<IRoom> = {
+			$set: {
+				'u.name': name,
 			},
 		};
 

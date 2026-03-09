@@ -186,6 +186,7 @@ export interface ISubscriptionsModel extends IBaseModel<ISubscription> {
 	findByRoomIdWhenUserIdExists(rid: string, options?: FindOptions<ISubscription>): FindCursor<ISubscription>;
 	updateNameAndFnameById(_id: string, name: string, fname: string): Promise<UpdateResult | Document>;
 	setUserUsernameByUserId(userId: string, username: string): Promise<UpdateResult | Document>;
+	setUserNameByUserId(userId: string, name: string): Promise<UpdateResult | Document>;
 	updateFnameByRoomId(rid: string, fname: string): Promise<UpdateResult | Document>;
 	updateDisplayNameByRoomId(roomId: string, fname: string): Promise<UpdateResult | Document>;
 	setNameForDirectRoomsWithOldName(oldName: string, name: string): Promise<UpdateResult | Document>;

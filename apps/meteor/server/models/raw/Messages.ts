@@ -1231,12 +1231,36 @@ export class MessagesRaw extends BaseRaw<IMessage> implements IMessagesModel {
 		return this.updateMany(query, update);
 	}
 
+	updateAllNamesByUserId(userId: string, name: string): Promise<UpdateResult | Document> {
+		const query = { 'u._id': userId };
+
+		const update = {
+			$set: {
+				'u.name': name,
+			},
+		};
+
+		return this.updateMany(query, update);
+	}
+
 	updateUsernameOfEditByUserId(userId: string, username: string): Promise<UpdateResult | Document> {
 		const query = { 'editedBy._id': userId };
 
 		const update = {
 			$set: {
 				'editedBy.username': username,
+			},
+		};
+
+		return this.updateMany(query, update);
+	}
+
+	updateNameOfEditByUserId(userId: string, name: string): Promise<UpdateResult | Document> {
+		const query = { 'editedBy._id': userId };
+
+		const update = {
+			$set: {
+				'editedBy.name': name,
 			},
 		};
 

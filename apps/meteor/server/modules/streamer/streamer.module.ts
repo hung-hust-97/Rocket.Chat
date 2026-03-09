@@ -175,7 +175,13 @@ export abstract class Streamer<N extends keyof StreamerEvents> extends EventEmit
 			}
 		}
 
-		if (eventName.length === 0) {
+		if (!eventName || typeof eventName !== 'string' || eventName.length === 0) {
+			SystemLogger.error({
+				msg: 'Invalid event name for streamer subscription',
+				name: this.name,
+				eventName,
+				userId: publication.userId,
+			});
 			throw new MeteorError('invalid-event-name');
 		}
 

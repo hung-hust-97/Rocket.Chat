@@ -8,6 +8,7 @@ import { _setRealName } from './setRealName';
 import { _setUsername } from './setUsername';
 import { updateGroupDMsName } from './updateGroupDMsName';
 import { validateName } from './validateName';
+import { Notifications } from '../../../notifications/server';
 
 /**
  *
@@ -144,12 +145,28 @@ async function updateUsernameReferences({
 		// update name and fname of 1-on-1 direct messages
 		await Subscriptions.updateDirectNameAndFnameByName(previousUsername, rawUsername && username, rawName && name);
 
-		Rooms.relpaceName(previousUsername, name)
-		
+		await Rooms.replaceName(previousUsername, name);
+
+		await Messages.updateAllNamesByUserId(user._id, name);
+		await Messages.updateNameOfEditByUserId(user._id, name);
+		await Rooms.replaceNameOfUserByUserId(user._id, name);
+		await Subscriptions.setUserNameByUserId(user._id, name);
+
 		// update name and fname of group direct messages
 		await updateGroupDMsName(user);
 
 		// update name and username of users on video conferences
 		await VideoConference.updateUserReferences(user._id, username || previousUsername, name || previousName);
+
+		// Socket notifications
+		const userSubscriptions = await Subscriptions.findByUserId(user._id, { projection: { rid: 1 } }).toArray();
+		for (const sub of userSubscriptions) {
+			void Notifications.notifyRoomUsers(sub.rid, 'userDataUpdate', {
+				type: 'name',
+				_id: user._id,
+				name,
+				username,
+			});
+		}
 	}
 }

@@ -249,6 +249,8 @@ export interface IRoomsModel extends IBaseModel<IRoom> {
 	replaceUsername(username: string, newUsername: string): Promise<UpdateResult | Document>;
 	replaceMutedUsername(username: string, newUsername: string): Promise<UpdateResult | Document>;
 	replaceUsernameOfUserByUserId(userId: string, newUsername: string): Promise<UpdateResult | Document>;
+	replaceName(previousUsername: string, newName: string): Promise<UpdateResult | Document>;
+	replaceNameOfUserByUserId(userId: string, name: string): Promise<UpdateResult | Document>;
 	setJoinCodeById(rid: string, joinCode: string): Promise<UpdateResult>;
 	setTypeById(rid: string, type: IRoom['t']): Promise<UpdateResult>;
 	setTopicById(rid: string, topic?: string | undefined): Promise<UpdateResult>;
