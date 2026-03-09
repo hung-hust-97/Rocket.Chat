@@ -507,6 +507,14 @@ export class NotificationsModule {
 		return this.streamUser.emit(`${userId}/${eventName}`, ...args);
 	}
 
+	async notifyRoomUsers<E extends string>(roomId: string, eventName: E, ...args: any[]): Promise<void> {
+		const subscriptions = await Subscriptions.findByRoomId(roomId, {
+			projection: { 'u._id': 1, '_id': 0 },
+		}).toArray();
+
+		subscriptions.forEach((subscription) => (this.notifyUser as any)(subscription.u._id, eventName, ...args));
+	}
+
 	notifyAllInThisInstance<E extends StreamKeys<'notify-all'>>(eventName: E, ...args: StreamerCallbackArgs<'notify-all', E>): void {
 		return this.streamAll.emitWithoutBroadcast(eventName, ...args);
 	}

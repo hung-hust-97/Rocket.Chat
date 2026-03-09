@@ -1312,6 +1312,18 @@ export class SubscriptionsRaw extends BaseRaw<ISubscription> implements ISubscri
 		return this.updateMany(query, update);
 	}
 
+	setUserNameByUserId(userId: string, name: string): Promise<UpdateResult | Document> {
+		const query = { 'u._id': userId };
+
+		const update: UpdateFilter<ISubscription> = {
+			$set: {
+				'u.name': name,
+			},
+		};
+
+		return this.updateMany(query, update);
+	}
+
 	setNameForDirectRoomsWithOldName(oldName: string, name: string): Promise<UpdateResult | Document> {
 		const query: Filter<ISubscription> = {
 			name: oldName,

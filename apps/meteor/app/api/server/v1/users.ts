@@ -56,6 +56,7 @@ import { isUserFromParams } from '../helpers/isUserFromParams';
 import { getUploadFormData } from '../lib/getUploadFormData';
 import { isValidQuery } from '../lib/isValidQuery';
 import { findPaginatedUsersByStatus, findUsersToAutocomplete, getInclusiveFields, getNonEmptyFields, getNonEmptyQuery } from '../lib/users';
+import { saveUserIdentity } from '../../../lib/server/functions/saveUserIdentity';
 
 API.v1.addRoute(
 	'users.getAvatar',
@@ -1345,6 +1346,34 @@ API.v1.addRoute(
 			});
 		},
 	},
+);
+
+API.v1.addRoute(
+	'users.updateName',
+	{ authRequired: true },
+	{
+		async put() {
+			const { name, username } = this.bodyParams;
+			if (!name) {
+				return API.v1.failure('Name is required');
+			}
+			if (!validateNameChars(name)) {
+				return API.v1.failure('Name contains invalid characters');
+			}
+
+			try {
+				const user = await Users.findOneByUsername(username);
+				if (!user) return API.v1.failure('User not found');
+
+				if (!(await saveUserIdentity({ _id: user._id, name }))) {
+					return API.v1.failure('Error updating name');
+				}
+				return API.v1.success();
+			} catch (error) {
+				return API.v1.failure(error.message);
+			}
+		}
+	}
 );
 
 settings.watch<number>('Rate_Limiter_Limit_RegisterUser', (value) => {

@@ -28,6 +28,7 @@ import { normalizeMessagesForUser } from '../../../utils/server/lib/normalizeMes
 import { API } from '../api';
 import { getPaginationItems } from '../helpers/getPaginationItems';
 import { findDiscussionsFromRoom, findMentionedMessages, findStarredMessages } from '../lib/messages';
+import { Notifications } from '../../../notifications/server';
 import { IRoom } from '@rocket.chat/core-typings';
 
 API.v1.addRoute(
@@ -896,3 +897,60 @@ API.v1.addRoute(
 		},
 	},
 );
+
+API.v1.addRoute(
+	'chat.updatePosition',
+	{ authRequired: true },
+	{
+		async put() {
+			try {
+				const { roomIds, position, username } = this.bodyParams;
+
+				if (!roomIds) {
+					throw new Meteor.Error('error-roomId-param-not-provided', 'The required "roomIds" param is missing.');
+				}
+
+				if (!position) {
+					throw new Meteor.Error('error-position-param-not-provided', 'The required "position" param is missing.');
+				}
+
+				if (!username) {
+					throw new Meteor.Error('error-username-param-not-provided', 'The required "username" param is missing.');
+				}
+
+				console.log('RocketChat updatePosition: ', roomIds, position, username);
+
+				const result = await Messages.updateMany(
+					{ rid: { $in: roomIds }, 'u.username': username },
+					{ $set: { position: position } }
+				);
+
+				console.log('RocketChat updatePosition Result: ', {
+					roomIds,
+					username,
+					position,
+					matchedCount: result.matchedCount,
+					modifiedCount: result.modifiedCount,
+				});
+
+				const user = await Users.findOneByUsername(username, { projection: { _id: 1 } });
+				if (user) {
+					for (const rid of roomIds) {
+						void Notifications.notifyRoomUsers(rid, 'userDataUpdate', {
+							type: 'position',
+							_id: user._id,
+							username,
+							position,
+						});
+					}
+				}
+
+				return API.v1.success();
+			} catch (error) {
+				console.error('RocketChat updatePosition Error: ', error);
+				return API.v1.failure(error.message);
+			}
+		},
+	},
+);
+

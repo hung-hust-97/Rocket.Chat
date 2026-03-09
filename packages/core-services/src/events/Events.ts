@@ -119,6 +119,7 @@ export type EventSignatures = {
 	'notify.updateCustomSound'(data: { soundData: ICustomSound }): void;
 	'notify.calendar'(uid: string, data: ICalendarNotification): void;
 	'notify.messagesRead'(data: { rid: string; until: Date; tmid?: string }): void;
+	'notify.unreadChanged'(data: { uid: string; rid: string; unread: number }): void;
 	'notify.importedMessages'(data: { roomIds: string[] }): void;
 	'permission.changed'(data: { clientAction: ClientAction; data: any }): void;
 	'room'(data: { action: string; room: Partial<IRoom> }): void;

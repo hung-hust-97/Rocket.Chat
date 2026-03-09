@@ -1,4 +1,5 @@
 import type { IRoom, IUser } from '@rocket.chat/core-typings';
+import { api } from '@rocket.chat/core-services';
 import { NotificationQueue, Subscriptions } from '@rocket.chat/models';
 
 import { callbacks } from '../../lib/callbacks';
@@ -18,6 +19,7 @@ export async function readMessages(rid: IRoom['_id'], uid: IUser['_id'], readThr
 	await Subscriptions.setAsReadByRoomIdAndUserId(rid, uid, readThreads, alert);
 
 	await NotificationQueue.clearQueueByUserId(uid);
+	await api.broadcast('notify.unreadChanged', { uid, rid, unread: 0 });
 
 	const lastSeen = sub.ls || sub.ts;
 	callbacks.runAsync('afterReadMessages', rid, { uid, lastSeen });

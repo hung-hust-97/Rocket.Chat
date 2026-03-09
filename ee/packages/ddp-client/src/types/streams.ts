@@ -155,6 +155,8 @@ export interface StreamerEvents {
 				  ];
 		},
 
+		{ key: `${string}/unread-changed`; args: [{ rid: string; unread: number }] },
+
 		{ key: `${string}/message`; args: [IMessage] },
 		{ key: `${string}/force_logout`; args: [] },
 		{
