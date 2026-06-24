@@ -1,0 +1,81 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var node_util_1 = require("node:util");
+var jest_axe_1 = require("jest-axe");
+var uuid = __importStar(require("uuid"));
+require("@testing-library/jest-dom");
+expect.extend(jest_axe_1.toHaveNoViolations);
+var urlByBlob = new WeakMap();
+var blobByUrl = new Map();
+globalThis.URL.createObjectURL = function (blob) {
+    var _a;
+    var url = (_a = urlByBlob.get(blob)) !== null && _a !== void 0 ? _a : "blob://".concat(uuid.v4());
+    urlByBlob.set(blob, url);
+    blobByUrl.set(url, blob);
+    return url;
+};
+globalThis.URL.revokeObjectURL = function (url) {
+    var blob = blobByUrl.get(url);
+    if (!blob) {
+        return;
+    }
+    urlByBlob.delete(blob);
+    blobByUrl.delete(url);
+};
+globalThis.ResizeObserver = jest.fn().mockImplementation(function () { return ({
+    observe: jest.fn(),
+    unobserve: jest.fn(),
+    disconnect: jest.fn(),
+}); });
+Object.defineProperty(global.navigator, 'serviceWorker', {
+    value: {
+        register: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+    },
+});
+globalThis.IntersectionObserver = /** @class */ (function () {
+    function IntersectionObserver() {
+        this.root = null;
+        this.rootMargin = '';
+        this.thresholds = [];
+    }
+    IntersectionObserver.prototype.disconnect = function () {
+        return null;
+    };
+    IntersectionObserver.prototype.observe = function () {
+        return null;
+    };
+    IntersectionObserver.prototype.takeRecords = function () {
+        return [];
+    };
+    IntersectionObserver.prototype.unobserve = function () {
+        return null;
+    };
+    return IntersectionObserver;
+}());
+globalThis.TextEncoder = node_util_1.TextEncoder;
+globalThis.TextDecoder = node_util_1.TextDecoder;

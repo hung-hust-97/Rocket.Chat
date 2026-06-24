@@ -1,0 +1,1 @@
+{"version":3,"sources":["src/definition/accessors/IAppUpdateContext.ts"],"names":[],"mappings":"","file":"IAppUpdateContext.js","sourcesContent":["import type { IUser } from '../users';\n\nexport interface IAppUpdateContext {\n    user?: IUser;\n    oldAppVersion: string;\n}\n"]}

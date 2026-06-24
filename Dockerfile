@@ -12,6 +12,9 @@ RUN sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/source
     g++ \
     build-essential \
     git \
+    make \
+    python3 \
+    python3-pip \
     python2-minimal
 
 # Cài Meteor (Meteor chỉ dùng ở builder stage)
